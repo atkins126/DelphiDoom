@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -371,10 +371,10 @@ begin
     exit;
   end;
 
-  if (mo.flags and (MF_MISSILE or MF_SKULLFLY)) <> 0 then
+  if mo.flags and (MF_MISSILE or MF_SKULLFLY) <> 0 then
     exit; // no friction for missiles ever
 
-  if (mo.flags3_ex and MF3_EX_BOUNCE) <> 0 then
+  if mo.flags3_ex and MF3_EX_BOUNCE <> 0 then
     exit; // no friction for bouncing objects
 
   if (player <> nil) and (player.laddertics > 0) then
@@ -553,7 +553,11 @@ begin
         // after hitting the ground (hard),
         // and utter appropriate sound.
         player.deltaviewheight := _SHR(mo.momz, 3);
-        S_StartSound(mo, Ord(sfx_oof));
+        if leveltime > player.nextoof then
+        begin
+          S_StartSound(mo, Ord(sfx_oof));
+          player.nextoof := leveltime + 4 * TICRATE;
+        end;
       end;
       mo.momz := 0;
     end;
@@ -858,6 +862,7 @@ begin
   if mobj.flags_ex and MF_EX_FLOATBOB <> 0 then
     mobj.bob := N_Random and FLOATBOBMASK;
   mobj.health := info.spawnhealth;
+  mobj.mass := info.mass;
 
   if gameskill <> sk_nightmare then
     mobj.reactiontime := info.reactiontime;

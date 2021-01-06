@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -33,6 +33,9 @@ unit gl_automap;
 
 interface
 
+uses
+  r_defs;
+
 procedure gld_InitAutomap;
 
 procedure gld_ShutDownAutomap;
@@ -47,7 +50,7 @@ procedure gld_AddAutomapTriangle(
   const x1, y1, u1, v1: integer;
   const x2, y2, u2, v2: integer;
   const x3, y3, u3, v3: integer;
-  const cc: LongWord; const lump: integer);
+  const cc: LongWord; const lump: integer; const sec: Psector_t);
 
 procedure gld_DrawAutomap;
 
@@ -58,6 +61,7 @@ uses
   doomdef,
   d_delphi,
   m_fixed,
+  tables,
   gl_defs,
   gl_tex,
   gl_render,
@@ -76,7 +80,12 @@ type
     x1, y1, x2, y2, x3, y3: integer;
     u1, v1, u2, v2, u3, v3: float;
     lump: integer;
+    flat: integer;
+    hasangle: boolean;
+    angle: float;
+    anglex, angley: float;
     r, g, b: float;
+    sec: Psector_t;
   end;
   Pglamrenderitem_t = ^glamrenderitem_t;
   glamrenderitem_tArray = array[0..$FFF] of glamrenderitem_t;
@@ -169,7 +178,7 @@ procedure gld_AddAutomapTriangle(
   const x1, y1, u1, v1: integer;
   const x2, y2, u2, v2: integer;
   const x3, y3, u3, v3: integer;
-  const cc: LongWord; const lump: integer);
+  const cc: LongWord; const lump: integer; const sec: Psector_t);
 var
   l: Pglamrenderitem_t;
 begin
@@ -196,7 +205,18 @@ begin
   l.r := ((cc shr 16) and $FF) / 255;
   l.g := ((cc shr 8) and $FF) / 255;
   l.b := (cc and $FF) / 255;
+
   l.lump := lump;
+  l.flat := sec.floorpic;
+  l.sec := sec;
+
+  l.hasangle := sec.floorangle <> 0;
+  if l.hasangle then
+  begin
+    l.angle := (sec.floorangle / ANGLE_MAX) * 360.0;
+    l.anglex := sec.flooranglex / FLATUVSCALE;
+    l.angley := sec.floorangley / FLATUVSCALE;
+  end;
 
   inc(numamitems);
 end;
@@ -235,18 +255,69 @@ begin
 end;
 
 procedure gld_DrawAMTriangle(const l: Pglamrenderitem_t);
+var
+  tex: PGLTexture;
+{$IFDEF DOOM_OR_STRIFE}
+  xoffs, yoffs: float;
+{$ENDIF}
 begin
   glEnable(GL_TEXTURE_2D);
 
   glColor4f(l.r, l.g, l.b, 1.0);
 
-  gld_BindFlat(gld_RegisterFlat(l.lump, true));
+  tex := gld_RegisterFlat(l.lump, true, l.flat);
+  gld_BindFlat(tex);
+
+{$IFDEF DOOM_OR_STRIFE}
+  xoffs := l.sec.floor_xoffs * tex.texturescale / FLATUVSCALE;
+  yoffs := l.sec.floor_yoffs * tex.texturescale / FLATUVSCALE;
+  if (l.sec.floor_xoffs <> 0) or (l.sec.floor_yoffs <> 0) then
+  begin
+    glMatrixMode(GL_TEXTURE);
+    glPushMatrix;
+    glTranslatef(xoffs, yoffs, 0.0);
+  end;
+{$ENDIF}
+
+  if l.hasangle then
+  begin
+    glMatrixMode(GL_TEXTURE);
+    glPushMatrix;
+    glTranslatef(
+      l.anglex * tex.texturescale {$IFDEF HEXEN}* 64 / tex.width{$ENDIF},
+      -l.angley * tex.texturescale {$IFDEF HEXEN}* 64 / tex.height{$ENDIF},
+      0.0);
+    glRotatef(l.angle, 0, 0, 1);
+    glTranslatef(
+      -l.anglex * tex.texturescale {$IFDEF HEXEN}* 64 / tex.width{$ENDIF},
+      l.angley * tex.texturescale {$IFDEF HEXEN}* 64 / tex.height{$ENDIF},
+      0.0);
+  end;
 
   glBegin(GL_TRIANGLES);
-    glTexCoord2f(l.v1, l.u1); glVertex2i(l.x1, l.y1);
-    glTexCoord2f(l.v2, l.u2); glVertex2i(l.x2, l.y2);
-    glTexCoord2f(l.v3, l.u3); glVertex2i(l.x3, l.y3);
+    glTexCoord2f(l.v1 * tex.texturescale {$IFDEF HEXEN}* 64 / tex.width{$ENDIF}, l.u1 * tex.texturescale {$IFDEF HEXEN}* 64 / tex.height{$ENDIF});
+    glVertex2i(l.x1, l.y1);
+    glTexCoord2f(l.v2 * tex.texturescale {$IFDEF HEXEN}* 64 / tex.width{$ENDIF}, l.u2 * tex.texturescale {$IFDEF HEXEN}* 64 / tex.height{$ENDIF});
+    glVertex2i(l.x2, l.y2);
+    glTexCoord2f(l.v3 * tex.texturescale {$IFDEF HEXEN}* 64 / tex.width{$ENDIF}, l.u3 * tex.texturescale {$IFDEF HEXEN}* 64 / tex.height{$ENDIF});
+    glVertex2i(l.x3, l.y3);
   glEnd;
+
+  if l.hasangle then
+  begin
+    glMatrixMode(GL_TEXTURE);
+    glPopMatrix;
+    glMatrixMode(GL_MODELVIEW);
+  end;
+
+{$IFDEF DOOM_OR_STRIFE}
+  if (l.sec.floor_xoffs <> 0) or (l.sec.floor_yoffs <> 0) then
+  begin
+    glMatrixMode(GL_TEXTURE);
+    glPopMatrix;
+    glMatrixMode(GL_MODELVIEW);
+  end;
+{$ENDIF}
 
   glDisable(GL_TEXTURE_2D);
 end;

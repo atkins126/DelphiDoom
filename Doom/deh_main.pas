@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -47,7 +47,7 @@ procedure DEH_Init;
 procedure DEH_ShutDown;
 
 const
-  DEHNUMACTIONS = 261;
+  DEHNUMACTIONS = 267;
 
 type
   deh_action_t = record
@@ -2680,6 +2680,24 @@ begin
   deh_actions[260].action.acp1 := @A_ChangeFlag;
   deh_actions[260].name := strupper('ChangeFlag');
   {$IFDEF DLL}deh_actions[260].decl := 'A_ChangeFlag(flag: string, onoff: boolean)';{$ENDIF}
+  deh_actions[261].action.acp1 := @A_CheckFloor;
+  deh_actions[261].name := strupper('CheckFloor');
+  {$IFDEF DLL}deh_actions[261].decl := 'A_CheckFloor(offset: integer)';{$ENDIF}
+  deh_actions[262].action.acp1 := @A_CheckCeiling;
+  deh_actions[262].name := strupper('CheckCeiling');
+  {$IFDEF DLL}deh_actions[262].decl := 'A_CheckCeiling(offset: integer)';{$ENDIF}
+  deh_actions[263].action.acp1 := @A_StopSound;
+  deh_actions[263].name := strupper('StopSound');
+  {$IFDEF DLL}deh_actions[263].decl := 'A_StopSound()';{$ENDIF}
+  deh_actions[264].action.acp1 := @A_JumpIfTargetOutsideMeleeRange;
+  deh_actions[264].name := strupper('JumpIfTargetOutsideMeleeRange');
+  {$IFDEF DLL}deh_actions[264].decl := 'A_JumpIfTargetOutsideMeleeRange(offset: integer)';{$ENDIF}
+  deh_actions[265].action.acp1 := @A_JumpIfTargetInsideMeleeRange;
+  deh_actions[265].name := strupper('JumpIfTargetInsideMeleeRange');
+  {$IFDEF DLL}deh_actions[265].decl := 'A_JumpIfTargetInsideMeleeRange(offset: integer)';{$ENDIF}
+  deh_actions[266].action.acp1 := @A_JumpIfTracerCloser;
+  deh_actions[266].name := strupper('JumpIfTracerCloser');
+  {$IFDEF DLL}deh_actions[266].decl := 'A_JumpIfTracerCloser(distancetotarget: float, offset: integer)';{$ENDIF}
 
   deh_strings.numstrings := 0;
   deh_strings.realnumstrings := 0;

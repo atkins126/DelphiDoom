@@ -3,7 +3,7 @@
 //  DelphiStrife: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -338,7 +338,11 @@ uses
   p_musinfo in 'Base\p_musinfo.pas',
   p_levelinfo in 'Base\p_levelinfo.pas',
   deh_base in 'Base\deh_base.pas',
-  p_animdefs in 'Base\p_animdefs.pas';
+  p_animdefs in 'Base\p_animdefs.pas',
+  p_easyslope in 'Base\p_easyslope.pas',
+  r_flatinfo in 'Base\r_flatinfo.pas',
+  p_easyangle in 'Base\p_easyangle.pas',
+  mn_screenshot in 'Base\mn_screenshot.pas';
 
 var
   Saved8087CW: Word;

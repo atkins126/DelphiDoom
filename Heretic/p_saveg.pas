@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Heretic source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -67,6 +67,10 @@ procedure P_ArchiveOverlay;
 
 procedure P_UnArchiveOverlay;
 
+
+procedure P_ArchiveScreenShot;
+
+procedure P_UnArchiveScreenShot;
 var
   save_p: PByteArray;
   savegameversion: integer;
@@ -81,6 +85,7 @@ uses
   d_think,
   g_game,
   m_fixed,
+  mn_screenshot,
   info_h,
   info,
   i_system,
@@ -147,10 +152,10 @@ end;
 //
 // P_UnArchivePlayers
 //
-function P_UnArchiveOldPlayer115(pp: Pplayer_t): boolean;
+function P_UnArchiveOldPlayer205(pp: Pplayer_t): boolean;
 var
-  p1: player_t115;
-  p: Pplayer_t115;
+  p1: player_t205;
+  p: Pplayer_t205;
 begin
   p := @p1;
   if savegameversion <= VERSION110 then
@@ -165,6 +170,9 @@ begin
     p.oldviewz := p.viewz;
     p.teleporttics := 0;
     p.quaketics := 0;
+    pp.lookdir16 := pp.lookdir * 16; // JVAL Smooth Look Up/Down
+    Pticcmd_t202(@pp.cmd)^ := pp.cmd202;
+    pp.cmd.lookupdown16 := (pp.cmd.lookfly and 15) * 256;
     result := true;
   end
   else if savegameversion <= VERSION114 then
@@ -177,12 +185,24 @@ begin
     p.oldviewz := p.viewz;
     p.teleporttics := 0;
     p.quaketics := 0;
+    pp.lookdir16 := pp.lookdir * 16; // JVAL Smooth Look Up/Down
+    Pticcmd_t202(@pp.cmd)^ := pp.cmd202;
+    pp.cmd.lookupdown16 := (pp.cmd.lookfly and 15) * 256;
     result := true;
   end
   else if savegameversion <= VERSION115 then
   begin
     memcpy(pointer(p), save_p, SizeOf(player_t115));
     incp(pointer(save_p), SizeOf(player_t115));
+    pp.lookdir16 := pp.lookdir * 16; // JVAL Smooth Look Up/Down
+    Pticcmd_t202(@pp.cmd)^ := pp.cmd202;
+    pp.cmd.lookupdown16 := (pp.cmd.lookfly and 15) * 256;
+    result := true;
+  end
+  else if savegameversion <= VERSION205 then
+  begin
+    memcpy(pointer(p), save_p, SizeOf(player_t205));
+    incp(pointer(save_p), SizeOf(player_t205));
     result := true;
   end
   else
@@ -191,10 +211,8 @@ begin
     exit;
   end;
 
-  memcpy(pointer(pp), pointer(p), SizeOf(player_t115));
-  pp.lookdir16 := pp.lookdir * 16; // JVAL Smooth Look Up/Down
-  Pticcmd_t202(@pp.cmd)^ := pp.cmd202;
-  pp.cmd.lookupdown16 := (pp.cmd.lookfly and 15) * 256;
+  memcpy(pointer(pp), pointer(p), SizeOf(player_t205));
+  pp.nextoof := 0;
 end;
 
 
@@ -210,12 +228,12 @@ begin
 
     PADSAVEP;
 
-    if savegameversion >= VERSION203 then
+    if savegameversion >= VERSION206 then
     begin
       memcpy(@players[i], save_p, SizeOf(player_t));
       incp(pointer(save_p), SizeOf(player_t));
     end
-    else if not P_UnArchiveOldPlayer115(@players[i]) then
+    else if not P_UnArchiveOldPlayer205(@players[i]) then
       I_Error('P_UnArchivePlayers(): Unsupported saved game version: %d', [savegameversion]);
 
     // will be set when unarc thinker
@@ -259,10 +277,12 @@ begin
     put := @put[2];
     PInteger(put)^ := sec.ceilingheight;
     put := @put[2];
+
     Pchar8_t(put)^ := flats[sec.floorpic].name;
     put := @put[SizeOf(char8_t) div SizeOf(SmallInt)];
     Pchar8_t(put)^ := flats[sec.ceilingpic].name;
     put := @put[SizeOf(char8_t) div SizeOf(SmallInt)];
+
     put[0] := sec.lightlevel;
     put := @put[1];
     put[0] := sec.special; // needed?
@@ -281,6 +301,38 @@ begin
     // JVAL: sector gravity (VERSION 204)
     PInteger(put)^ := sec.gravity;
     put := @put[2];
+
+    // JVAL: 20200221 - Texture angle
+    PLongWord(put)^ := sec.floorangle;
+    put := @put[2];
+    PInteger(put)^ := sec.flooranglex;
+    put := @put[2];
+    PInteger(put)^ := sec.floorangley;
+    put := @put[2];
+    PLongWord(put)^ := sec.ceilingangle;
+    put := @put[2];
+    PInteger(put)^ := sec.ceilinganglex;
+    put := @put[2];
+    PInteger(put)^ := sec.ceilingangley;
+    put := @put[2];
+
+    // JVAL: 20200522 - Slope values
+    Pfloat(put)^ := sec.fa;
+    put := @put[SizeOf(float) div 2];
+    Pfloat(put)^ := sec.fb;
+    put := @put[SizeOf(float) div 2];
+    Pfloat(put)^ := sec.fd;
+    put := @put[SizeOf(float) div 2];
+    Pfloat(put)^ := sec.fic;
+    put := @put[SizeOf(float) div 2];
+    Pfloat(put)^ := sec.ca;
+    put := @put[SizeOf(float) div 2];
+    Pfloat(put)^ := sec.cb;
+    put := @put[SizeOf(float) div 2];
+    Pfloat(put)^ := sec.cd;
+    put := @put[SizeOf(float) div 2];
+    Pfloat(put)^ := sec.cic;
+    put := @put[SizeOf(float) div 2];
 
     PInteger(put)^ := sec.num_saffectees;
     put := @put[2];
@@ -317,6 +369,7 @@ begin
       put := @put[2];
       PInteger(put)^ := si.rowoffset;
       put := @put[2];
+
       Pchar8_t(put)^ := R_NameForSideTexture(si.toptexture);
       put := @put[SizeOf(char8_t) div SizeOf(SmallInt)];
       Pchar8_t(put)^ := R_NameForSideTexture(si.bottomtexture);
@@ -413,6 +466,50 @@ begin
     else
       sec.gravity := GRAVITY;
 
+    // JVAL: 20200221 - Texture angle
+    if savegameversion > VERSION205 then
+    begin
+      sec.floorangle := PLongWord(get)^;
+      get := @get[2];
+      sec.flooranglex := PInteger(get)^;
+      get := @get[2];
+      sec.floorangley := PInteger(get)^;
+      get := @get[2];
+      sec.ceilingangle := PLongWord(get)^;
+      get := @get[2];
+      sec.ceilinganglex := PInteger(get)^;
+      get := @get[2];
+      sec.ceilingangley := PInteger(get)^;
+      get := @get[2];
+
+      // JVAL: 20200522 - Slope values
+      sec.fa := Pfloat(get)^;
+      get := @get[SizeOf(float) div 2];
+      sec.fb := Pfloat(get)^;
+      get := @get[SizeOf(float) div 2];
+      sec.fd := Pfloat(get)^;
+      get := @get[SizeOf(float) div 2];
+      sec.fic := Pfloat(get)^;
+      get := @get[SizeOf(float) div 2];
+      sec.ca := Pfloat(get)^;
+      get := @get[SizeOf(float) div 2];
+      sec.cb := Pfloat(get)^;
+      get := @get[SizeOf(float) div 2];
+      sec.cd := Pfloat(get)^;
+      get := @get[SizeOf(float) div 2];
+      sec.cic := Pfloat(get)^;
+      get := @get[SizeOf(float) div 2];
+    end
+    else
+    begin
+      sec.floorangle := 0;
+      sec.flooranglex := 0;
+      sec.floorangley := 0;
+      sec.ceilingangle := 0;
+      sec.ceilinganglex := 0;
+      sec.ceilingangley := 0;
+    end;
+
     if savegameversion >= VERSION115 then
     begin
       sec.num_saffectees := PInteger(get)^;
@@ -452,6 +549,7 @@ begin
       if li.sidenum[j] = -1 then
         continue;
       si := @sides[li.sidenum[j]];
+
       if savegameversion <= VERSION114 then
       begin
         si.textureoffset := get[0] * FRACUNIT;
@@ -572,17 +670,49 @@ begin
     save_p := @save_p[1];
     case tclass of
       Ord(tc_end):
-        exit; // end of list
+        begin
+          // Retrieve target, tracer and master
+          currentthinker := thinkercap.next;
+          while currentthinker <> @thinkercap do
+          begin
+            next := currentthinker.next;
+
+            if @currentthinker._function.acp1 = @P_MobjThinker then
+            begin
+              Pmobj_t(currentthinker).target := P_FindMobjFromKey(integer(Pmobj_t(currentthinker).target));
+              Pmobj_t(currentthinker).tracer := P_FindMobjFromKey(integer(Pmobj_t(currentthinker).tracer));
+            end;
+
+            currentthinker := next;
+          end;
+
+          exit; // end of list
+        end;
 
       Ord(tc_mobj):
         begin
           PADSAVEP;
           mobj := Z_Malloc(SizeOf(mobj_t), PU_LEVEL, nil);
 
-          if savegameversion >= VERSION205 then
+          if savegameversion >= VERSION206 then
           begin
             memcpy(mobj, save_p, SizeOf(mobj_t));
             incp(pointer(save_p), SizeOf(mobj_t));
+          end
+          else if savegameversion >= VERSION205 then
+          begin
+            memcpy(mobj, save_p, SizeOf(mobj_t205));
+            incp(pointer(save_p), SizeOf(mobj_t205));
+
+            mobj.target := nil;
+            mobj.tracer := nil;
+            mobj.mass := mobjinfo[Ord(mobj._type)].mass;
+            mobj.args[0] := 0;
+            mobj.args[1] := 0;
+            mobj.args[2] := 0;
+            mobj.args[3] := 0;
+            mobj.args[4] := 0;
+            mobj.special := 0;
           end
           else if savegameversion >= VERSION115 then
           begin
@@ -596,6 +726,16 @@ begin
             mobj.flags3_ex := 0;
             mobj.flags4_ex := 0;
             mobj.rendervalidcount := 0;
+
+            mobj.target := nil;
+            mobj.tracer := nil;
+            mobj.mass := mobjinfo[Ord(mobj._type)].mass;
+            mobj.args[0] := 0;
+            mobj.args[1] := 0;
+            mobj.args[2] := 0;
+            mobj.args[3] := 0;
+            mobj.args[4] := 0;
+            mobj.special := 0;
           end
           else if savegameversion = VERSION114 then
           begin
@@ -611,6 +751,16 @@ begin
             mobj.flags3_ex := 0;
             mobj.flags4_ex := 0;
             mobj.rendervalidcount := 0;
+
+            mobj.target := nil;
+            mobj.tracer := nil;
+            mobj.mass := mobjinfo[Ord(mobj._type)].mass;
+            mobj.args[0] := 0;
+            mobj.args[1] := 0;
+            mobj.args[2] := 0;
+            mobj.args[3] := 0;
+            mobj.args[4] := 0;
+            mobj.special := 0;
           end
           else if (savegameversion = VERSION112) or (savegameversion = VERSION113) then
           begin
@@ -638,6 +788,16 @@ begin
             mobj.flags3_ex := 0;
             mobj.flags4_ex := 0;
             mobj.rendervalidcount := 0;
+
+            mobj.target := nil;
+            mobj.tracer := nil;
+            mobj.mass := mobjinfo[Ord(mobj._type)].mass;
+            mobj.args[0] := 0;
+            mobj.args[1] := 0;
+            mobj.args[2] := 0;
+            mobj.args[3] := 0;
+            mobj.args[4] := 0;
+            mobj.special := 0;
           end
           else if (savegameversion = VERSION110) or (savegameversion = VERSION111) then
           begin
@@ -714,18 +874,31 @@ begin
             mobj.flags4_ex := 0;
             mobj.rendervalidcount := 0;
 
+            mobj.target := nil;
+            mobj.tracer := nil;
+            mobj.mass := mobjinfo[Ord(mobj._type)].mass;
+            mobj.args[0] := 0;
+            mobj.args[1] := 0;
+            mobj.args[2] := 0;
+            mobj.args[3] := 0;
+            mobj.args[4] := 0;
+            mobj.special := 0;
+
             Z_Free(mobj111);
           end
           else
             I_Error('P_UnArchiveThinkers(): Unsupported saved game version: %d', [savegameversion]);
+
+          mobj.validcount := 0;
+          mobj.lightvalidcount := 0;
+          mobj.rendervalidcount := 0;
 
           if mobj.key < 2 then
             mobj.key := P_GenGlobalMobjKey;
           P_NotifyMobjKey(mobj);
 
           mobj.state := @states[integer(mobj.state)];
-          mobj.target := nil;
-          mobj.tracer := nil;
+          mobj.prevstate := @states[integer(mobj.prevstate)];
           if mobj.player <> nil then
           begin
             mobj.player := @players[integer(mobj.player) - 1];
@@ -1159,4 +1332,22 @@ begin
   overlay.LoadFromBuffer(Pointer(save_p));
 end;
 
+procedure P_ArchiveScreenShot;
+var
+  i: integer;
+begin
+  for i := 0 to MNSCREENSHOT_MAGIC_SIZE - 1 do
+    save_p[i] := mn_screenshotbuffer.header[i];
+  for i := 0 to MN_SCREENSHOTSIZE - 1 do
+    save_p[MNSCREENSHOT_MAGIC_SIZE + i] := mn_screenshotbuffer.data[i];
+
+  incp(pointer(save_p), SizeOf(menuscreenbuffer_t));
+end;
+
+procedure P_UnArchiveScreenShot;
+begin
+  // Nothing to do, just inc the buffer
+  if savegameversion >= VERSION206 then
+    incp(pointer(save_p), SizeOf(menuscreenbuffer_t));
+end;
 end.

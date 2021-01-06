@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Hexen source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -48,7 +48,7 @@ procedure DEH_Init;
 procedure DEH_ShutDown;
 
 const
-  DEHNUMACTIONS = 395;
+  DEHNUMACTIONS = 401;
 
 type
   deh_action_t = record
@@ -725,6 +725,7 @@ begin
                 end;
               end;
            8: Info_AddStateOwner(@states[state_no], Info_GetMobjNumForName(token2));
+           9: states[state_no].tics2 := state_val;
         end;
       end;
     end
@@ -3035,7 +3036,24 @@ begin
   deh_actions[394].action.acp1 := @A_ChangeFlag;
   deh_actions[394].name := strupper('ChangeFlag');
   {$IFDEF DLL}deh_actions[394].decl := 'A_ChangeFlag(flag: string, onoff: boolean)';{$ENDIF}
-
+  deh_actions[395].action.acp1 := @A_CheckFloor;
+  deh_actions[395].name := strupper('CheckFloor');
+  {$IFDEF DLL}deh_actions[395].decl := 'A_CheckFloor(offset: integer)';{$ENDIF}
+  deh_actions[396].action.acp1 := @A_CheckCeiling;
+  deh_actions[396].name := strupper('CheckCeiling');
+  {$IFDEF DLL}deh_actions[396].decl := 'A_CheckCeiling(offset: integer)';{$ENDIF}
+  deh_actions[397].action.acp1 := @A_StopSound;
+  deh_actions[397].name := strupper('StopSound');
+  {$IFDEF DLL}deh_actions[397].decl := 'A_StopSound()';{$ENDIF}
+  deh_actions[398].action.acp1 := @A_JumpIfTargetOutsideMeleeRange;
+  deh_actions[398].name := strupper('JumpIfTargetOutsideMeleeRange');
+  {$IFDEF DLL}deh_actions[398].decl := 'A_JumpIfTargetOutsideMeleeRange(offset: integer)';{$ENDIF}
+  deh_actions[399].action.acp1 := @A_JumpIfTargetInsideMeleeRange;
+  deh_actions[399].name := strupper('JumpIfTargetInsideMeleeRange');
+  {$IFDEF DLL}deh_actions[399].decl := 'A_JumpIfTargetInsideMeleeRange(offset: integer)';{$ENDIF}
+  deh_actions[400].action.acp1 := @A_JumpIfTracerCloser;
+  deh_actions[400].name := strupper('JumpIfTracerCloser');
+  {$IFDEF DLL}deh_actions[400].decl := 'A_JumpIfTracerCloser(distancetotarget: float, offset: integer)';{$ENDIF}
 
   deh_strings.numstrings := 0;
   deh_strings.realnumstrings := 0;

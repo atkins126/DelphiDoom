@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -101,6 +101,7 @@ uses
   m_rnd,
   p_local,
   p_maputl,
+  p_slopes,
   {$IFDEF HEXEN}
   p_setup,
   {$ENDIF}
@@ -212,6 +213,7 @@ begin
   baseproclist.Add('procedure SetActorHealth(const key: LongWord; const h: integer);', @PS_SetActorHealth);
   baseproclist.Add('function GetActorSpawnHealth(const key: LongWord): integer;', @PS_GetActorSpawnHealth);
   baseproclist.Add('function GetActorMass(const key: LongWord): integer;', @PS_GetActorMass);
+  baseproclist.Add('procedure SetActorMass(const key: LongWord; const m: Integer);', @PS_SetActorMass);
   baseproclist.Add('function GetActorHeight(const key: LongWord): fixed_t;', @PS_GetActorHeight);
   baseproclist.Add('procedure SetActorHeight(const key: LongWord; const h: fixed_t);', @PS_SetActorHeight);
   baseproclist.Add('function GetActorCustomDropItem(const key: LongWord): integer;', @PS_GetActorCustomDropItem);
@@ -223,6 +225,18 @@ begin
   baseproclist.Add('procedure SetActorScale(const key: LongWord; const value: integer);', @PS_SetActorScale);
   baseproclist.Add('function GetActorGravity(const key: LongWord): integer;', @PS_GetActorGravity);
   baseproclist.Add('procedure SetActorGravity(const key: LongWord; const value: integer);', @PS_SetActorGravity);
+  baseproclist.Add('function GetActorSpecial(const key: LongWord): Integer;', @PS_GetActorSpecial);
+  baseproclist.Add('procedure SetActorSpecial(const key: LongWord; const value: Integer);', @PS_SetActorSpecial);
+  baseproclist.Add('function GetActorArg1(const key: LongWord): integer;', @PS_GetActorArg1);
+  baseproclist.Add('procedure SetActorArg1(const key: LongWord; const value: integer);', @PS_SetActorArg1);
+  baseproclist.Add('function GetActorArg2(const key: LongWord): integer;', @PS_GetActorArg2);
+  baseproclist.Add('procedure SetActorArg2(const key: LongWord; const value: integer);', @PS_SetActorArg2);
+  baseproclist.Add('function GetActorArg3(const key: LongWord): integer;', @PS_GetActorArg3);
+  baseproclist.Add('procedure SetActorArg3(const key: LongWord; const value: integer);', @PS_SetActorArg3);
+  baseproclist.Add('function GetActorArg4(const key: LongWord): integer;', @PS_GetActorArg4);
+  baseproclist.Add('procedure SetActorArg4(const key: LongWord; const value: integer);', @PS_SetActorArg4);
+  baseproclist.Add('function GetActorArg5(const key: LongWord): integer;', @PS_GetActorArg5);
+  baseproclist.Add('procedure SetActorArg5(const key: LongWord; const value: integer);', @PS_SetActorArg5);
   baseproclist.Add('function GetActorCustomParam(const key: LongWord; const parm: string): integer;', @PS_GetActorCustomParam);
   baseproclist.Add('procedure SetActorCustomParam(const key: LongWord; const parm: string; const value: integer);', @PS_SetActorCustomParam);
   baseproclist.Add('function CheckActorFlag(const key: LongWord; const flag: LongWord): boolean;', @PS_CheckActorFlag);
@@ -350,6 +364,18 @@ begin
   baseproclist.Add('function GetSectorCeilingYOffset(const sec: Integer): fixed_t;', @PS_GetSectorCeilingYOffset);
   baseproclist.Add('procedure SetSectorCeilingYOffset(const sec: Integer; const offs: fixed_t);', @PS_SetSectorCeilingYOffset);
   {$ENDIF}
+  baseproclist.Add('function GetSectorFloorAngle(const sec: Integer): angle_t;', @PS_GetSectorFloorAngle);
+  baseproclist.Add('procedure SetSectorFloorAngle(const sec: Integer; const ang: angle_t);', @PS_SetSectorFloorAngle);
+  baseproclist.Add('function GetSectorFloorAngleX(const sec: Integer): fixed_t;', @PS_GetSectorFloorAngleX);
+  baseproclist.Add('procedure SetSectorFloorAngleX(const sec: Integer; const angx: fixed_t);', @PS_SetSectorFloorAngleX);
+  baseproclist.Add('function GetSectorFloorAngleY(const sec: Integer): fixed_t;', @PS_GetSectorFloorAngleY);
+  baseproclist.Add('procedure SetSectorFloorAngleY(const sec: Integer; const angy: fixed_t);', @PS_SetSectorFloorAngleY);
+  baseproclist.Add('function GetSectorCeilingAngle(const sec: Integer): angle_t;', @PS_GetSectorCeilingAngle);
+  baseproclist.Add('procedure SetSectorCeilingAngle(const sec: Integer; const ang: angle_t);', @PS_SetSectorCeilingAngle);
+  baseproclist.Add('function GetSectorCeilingAngleX(const sec: Integer): fixed_t;', @PS_GetSectorCeilingAngleX);
+  baseproclist.Add('procedure SetSectorCeilingAngleX(const sec: Integer; const angx: fixed_t);', @PS_SetSectorCeilingAngleX);
+  baseproclist.Add('function GetSectorCeilingAngleY(const sec: Integer): fixed_t;', @PS_GetSectorCeilingAngleY);
+  baseproclist.Add('procedure SetSectorCeilingAngleY(const sec: Integer; const angy: fixed_t);', @PS_SetSectorCeilingAngleY);
   baseproclist.Add('function GetSectorRippleFloor(const sec: Integer): Boolean;', @PS_GetSectorRippleFloor);
   baseproclist.Add('procedure SetSectorRippleFloor(const sec: Integer; const rpl: Boolean);', @PS_SetSectorRippleFloor);
   baseproclist.Add('function GetSectorRippleCeiling(const sec: Integer): Boolean;', @PS_GetSectorRippleCeiling);
@@ -364,6 +390,8 @@ begin
   baseproclist.Add('function FindSectorsFromTag(const tag: integer): TIntegerArray;', @PS_FindSectorsFromTag);
   baseproclist.Add('procedure SectorPlaySound(const secid: integer; const snd: string);', @PS_SectorPlaySound);
   baseproclist.Add('procedure SectorMoveZ(const secid: integer; const dz: fixed_t);', @PS_SectorMoveZ);
+  baseproclist.Add('procedure SetSectorFloorSlope(const secid: integer; const x1, y1, z1: fixed_t; const x2, y2, z2: fixed_t; const x3, y3, z3: fixed_t);', @PS_SetFloorSlope);
+  baseproclist.Add('procedure SetSectorCeilingSlope(const secid: integer; const x1, y1, z1: fixed_t; const x2, y2, z2: fixed_t; const x3, y3, z3: fixed_t);', @PS_SetCeilingSlope);
 // --------------------------- PLAYERS -----------------------------------------
   baseproclist.Add('function PlayerInGame(const plnum: integer): boolean;', @PS_PlayerInGame);
   {$IFDEF DOOM_OR_STRIFE}
@@ -482,6 +510,72 @@ begin
   {$IFDEF DOOM_OR_HERETIC}
   baseproclist.Add('function GameEpisode: integer;', @PS_GameEpisode);
   {$ENDIF}
+// ------------------ KEYBOARD CONTROL -----------------------------------------
+  baseproclist.Add('function gamekeydown(const kkey: integer): boolean;', @PS_gamekeydown);
+  baseproclist.Add('function mousebuttons(const mkey: integer): boolean;', @PS_mousebuttons);
+  baseproclist.Add('function joybuttons(const jkey: integer): boolean;', @PS_joybuttons);
+  baseproclist.Add('function key_right: integer;', @PS_key_right);
+  baseproclist.Add('function key_left: integer;', @PS_key_left);
+  baseproclist.Add('function key_up: integer;', @PS_key_up);
+  baseproclist.Add('function key_down: integer;', @PS_key_down);
+  baseproclist.Add('function key_lookup: integer;', @PS_key_lookup);
+  baseproclist.Add('function key_lookdown: integer;', @PS_key_lookdown);
+  baseproclist.Add('function key_lookcenter: integer;', @PS_key_lookcenter);
+  baseproclist.Add('function key_lookright: integer;', @PS_key_lookright);
+  baseproclist.Add('function key_lookleft: integer;', @PS_key_lookleft);
+  {$IFNDEF STRIFE}
+  baseproclist.Add('function key_lookforward: integer;', @PS_key_lookforward);
+  {$ENDIF}
+  baseproclist.Add('function key_strafeleft: integer;', @PS_key_strafeleft);
+  baseproclist.Add('function key_straferight: integer;', @PS_key_straferight);
+  baseproclist.Add('function key_fire: integer;', @PS_key_fire);
+  baseproclist.Add('function key_use: integer;', @PS_key_use);
+  baseproclist.Add('function key_strafe: integer;', @PS_key_strafe);
+  baseproclist.Add('function key_speed: integer;', @PS_key_speed);
+  baseproclist.Add('function key_jump: integer;', @PS_key_jump);
+  baseproclist.Add('function key_weapon0: integer;', @PS_key_weapon0);
+  baseproclist.Add('function key_weapon1: integer;', @PS_key_weapon1);
+  baseproclist.Add('function key_weapon2: integer;', @PS_key_weapon2);
+  baseproclist.Add('function key_weapon3: integer;', @PS_key_weapon3);
+  {$IFNDEF HEXEN}
+  baseproclist.Add('function key_weapon4: integer;', @PS_key_weapon4);
+  baseproclist.Add('function key_weapon5: integer;', @PS_key_weapon5);
+  baseproclist.Add('function key_weapon6: integer;', @PS_key_weapon6);
+  baseproclist.Add('function key_weapon7: integer;', @PS_key_weapon7);
+  {$ENDIF}
+  {$IFDEF HERETIC_OR_HEXEN}
+  baseproclist.Add('function key_flyup: integer;', @PS_key_flyup);
+  baseproclist.Add('function key_flydown: integer;', @PS_key_flydown);
+  baseproclist.Add('function key_flycenter: integer;', @PS_key_flycenter);
+  baseproclist.Add('function key_invleft: integer;', @PS_key_invleft);
+  baseproclist.Add('function key_invright: integer;', @PS_key_invright);
+  baseproclist.Add('function key_useartifact: integer;', @PS_key_useartifact);
+  {$ENDIF}
+  {$IFDEF STRIFE}
+  baseproclist.Add('function key_invleft: integer;', @PS_key_invleft);
+  baseproclist.Add('function key_invright: integer;', @PS_key_invright);
+  baseproclist.Add('function key_weapon8: integer;', @PS_key_weapon8);
+  baseproclist.Add('function key_weapon9: integer;', @PS_key_weapon9);
+  baseproclist.Add('function key_usehealth: integer;', @PS_key_usehealth);
+  baseproclist.Add('function key_invquery: integer;', @PS_key_invquery);
+  baseproclist.Add('function key_mission: integer;', @PS_key_mission);
+  baseproclist.Add('function key_invpop: integer;', @PS_key_invpop);
+  baseproclist.Add('function key_invkey: integer;', @PS_key_invkey);
+  baseproclist.Add('function key_invhome: integer;', @PS_key_invhome);
+  baseproclist.Add('function key_invend: integer;', @PS_key_invend);
+  baseproclist.Add('function key_invuse: integer;', @PS_key_invuse);
+  baseproclist.Add('function key_invdrop: integer;', @PS_key_invdrop);
+  {$ENDIF}
+  baseproclist.Add('function mousebfire: integer;', @PS_mousebfire);
+  baseproclist.Add('function mousebstrafe: integer;', @PS_mousebstrafe);
+  baseproclist.Add('function mousebforward: integer;', @PS_mousebforward);
+  baseproclist.Add('function joybfire: integer;', @PS_joybfire);
+  baseproclist.Add('function joybstrafe: integer;', @PS_joybstrafe);
+  baseproclist.Add('function joybuse: integer;', @PS_joybuse);
+  baseproclist.Add('function joybspeed: integer;', @PS_joybspeed);
+  baseproclist.Add('function joybjump: integer;', @PS_joybjump);
+  baseproclist.Add('function joyblleft: integer;', @PS_joyblleft);
+  baseproclist.Add('function joyblright: integer;', @PS_joyblright);
 // ------------------------------- MAP -----------------------------------------
   baseproclist.Add('function R_PointToAngle(x: fixed_t; y: fixed_t): angle_t;', @R_PointToAngle);
   baseproclist.Add('function R_PointToAngle2(const x1: fixed_t; const y1: fixed_t; const x2: fixed_t; const y2: fixed_t): angle_t;', @R_PointToAngle2);
@@ -510,6 +604,7 @@ begin
   baseproclist.Add('procedure OverlayClear;', @PS_OverlayClear);
   baseproclist.Add('procedure OverlayDrawPatch(const ticks : Integer; const patchname : string; const x, y : Integer);', @PS_OverlayDrawPatch);
   baseproclist.Add('procedure OverlayDrawPixel(const ticks : Integer; const red, green, blue : byte; const x, y : Integer);', @PS_OverlayDrawPixel);
+  baseproclist.Add('procedure OverlayDrawRect(const ticks: Integer; const red, green, blue: byte; const x1, y1, x2, y2: Integer);', @PS_OverlayDrawRect);
   baseproclist.Add('procedure OverlayDrawText(const ticks : Integer; const txt : string; const align : Integer; const x, y : Integer);', @PS_OverlayDrawText);
   baseproclist.Add('procedure OverlayDrawLeftText(const ticks : Integer; const txt : string; const x, y : Integer);', @PS_OverlayDrawLeftText);
   baseproclist.Add('procedure OverlayDrawRightText(const ticks : Integer; const txt : string; const x, y : Integer);', @PS_OverlayDrawRightText);

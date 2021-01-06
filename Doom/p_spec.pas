@@ -3111,6 +3111,7 @@ var
   i: integer;
   time: integer;
   s, sec: integer;
+  ang: angle_t;
 begin
   if W_CheckNumForName('texture2') < 0 then
     gameepisode := 1; // ???
@@ -3320,6 +3321,30 @@ begin
           s := -1;
           while P_FindSectorFromLineTag2(@lines[i], s) >= 0 do
             sectors[s].flags := sectors[s].flags or SF_SLIPSLOPEDESCENT;
+        end;
+      // JVAL: 20200517 - Rotate sector floor
+      284:
+        begin
+          ang := R_PointToAngle2(lines[i].v1.x, lines[i].v1.y, lines[i].v2.x, lines[i].v2.y);
+          s := -1;
+          while P_FindSectorFromLineTag2(@lines[i], s) >= 0 do
+          begin
+            sectors[s].floorangle := ang;
+            sectors[s].flooranglex := lines[i].v1.x;
+            sectors[s].floorangley := lines[i].v1.y;
+          end;
+        end;
+      // JVAL: 20200517 - Rotate sector ceiling
+      285:
+        begin
+          ang := R_PointToAngle2(lines[i].v1.x, lines[i].v1.y, lines[i].v2.x, lines[i].v2.y);
+          s := -1;
+          while P_FindSectorFromLineTag2(@lines[i], s) >= 0 do
+          begin
+            sectors[s].ceilingangle := ang;
+            sectors[s].ceilinganglex := lines[i].v1.x;
+            sectors[s].ceilingangley := lines[i].v1.y;
+          end;
         end;
       291:  // JVAL: 20200521 - Offset floor texture to vector
         begin
@@ -3658,10 +3683,20 @@ begin
     tmbbox[BOXRIGHT]  := p.x + radius;
     tmbbox[BOXLEFT]   := p.x - radius;
 
-    xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS);
-    xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
-    yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
-    yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
+    if internalblockmapformat then
+    begin
+      xl := MapBlockIntX(int64(tmbbox[BOXLEFT]) - int64(bmaporgx) - MAXRADIUS);
+      xh := MapBlockIntX(int64(tmbbox[BOXRIGHT]) - int64(bmaporgx) + MAXRADIUS);
+      yl := MapBlockIntY(int64(tmbbox[BOXBOTTOM]) - int64(bmaporgy) - MAXRADIUS);
+      yh := MapBlockIntY(int64(tmbbox[BOXTOP]) - int64(bmaporgy) + MAXRADIUS);
+    end
+    else
+    begin
+      xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS);
+      xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
+      yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
+      yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
+    end;
 
     bx := xl;
     while bx <= xh do

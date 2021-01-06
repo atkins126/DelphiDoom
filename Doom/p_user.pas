@@ -190,7 +190,8 @@ begin
   // Note: a LUT allows for effects
   //  like a ramp with low health.
 
-  if G_PlayingEngineVersion < VERSION122 then
+  if (G_PlayingEngineVersion < VERSION122) or
+     (G_PlayingEngineVersion >= VERSION205) then
   begin
     P_CalcHeight(player);
     exit;
@@ -282,7 +283,7 @@ begin
 
   if player.viewz < player.mo.floorz + 4 * FRACUNIT then
     player.viewz := player.mo.floorz + 4 * FRACUNIT;
-    
+
   player.oldviewz := oldviewz;
 end;
 
@@ -702,7 +703,7 @@ begin
   if player.cheats and CF_NOCLIP <> 0 then
     player.mo.flags := player.mo.flags or MF_NOCLIP
   else
-    player.mo.flags := player.mo.flags and (not MF_NOCLIP);
+    player.mo.flags := player.mo.flags and not MF_NOCLIP;
 
   // chain saw run forward
   cmd := @player.cmd;
@@ -711,7 +712,7 @@ begin
     cmd.angleturn := 0;
     cmd.forwardmove := $c800 div 512;
     cmd.sidemove := 0;
-    player.mo.flags := player.mo.flags and (not MF_JUSTATTACKED);
+    player.mo.flags := player.mo.flags and not MF_JUSTATTACKED;
   end;
 
   if player.quaketics > 0 then

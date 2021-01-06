@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Hexen source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -57,6 +57,8 @@ procedure P_LineOpening(linedef: Pline_t; check3dfloor: boolean);
 
 procedure P_LineOpeningTM(linedef: Pline_t; check3dfloor: boolean); // JVAL: Slopes
 
+procedure P_LineOpeningTM206(linedef: Pline_t; check3dfloor: boolean);  // JVAL: VERSION 206
+
 procedure P_UnsetThingPosition(thing: Pmobj_t);
 
 procedure P_SetThingPosition(thing: Pmobj_t);
@@ -82,10 +84,13 @@ var
 
   trace: divline_t;
 
+procedure P_InitIntercepts;
+procedure P_GrowIntercepts;
+
 var
-  intercepts: array[0..MAXINTERCEPTS - 1] of intercept_t;
+  intercepts: Pintercept_tArray;
   intercept_p: integer;
-  
+
 implementation
 
 uses
@@ -106,7 +111,7 @@ uses
 // P_AproxDistance
 // Gives an estimation of distance (not exact)
 //
-function P_AproxDistance(dx: fixed_t; dy: fixed_t): fixed_t;
+function P_AproxDistance32(dx: fixed_t; dy: fixed_t): fixed_t;
 begin
   dx := abs(dx);
   dy := abs(dy);
@@ -114,6 +119,31 @@ begin
     result := dx + dy - _SHR1(dx)
   else
     result := dx + dy - _SHR1(dy);
+end;
+
+function P_AproxDistance64(dx: fixed_t; dy: fixed_t): fixed_t;
+var
+  dx64, dy64: int64;
+  dist: int64;
+begin
+  dx64 := abs(dx);
+  dy64 := abs(dy);
+  if dx64 < dy64 then
+    dist := dy64 + dx64 div 2
+  else
+    dist := dx64 + dy64 div 2;
+  if dist > MAXINT then
+    result := MAXINT
+  else
+    result := dist;
+end;
+
+function P_AproxDistance(dx: fixed_t; dy: fixed_t): fixed_t;
+begin
+  if largemap then
+    result := P_AproxDistance64(dx, dy)
+  else
+    result := P_AproxDistance32(dx, dy);
 end;
 
 //
@@ -215,7 +245,7 @@ end;
 // P_PointOnDivlineSide
 // Returns 0 or 1.
 //
-function P_PointOnDivlineSide(x: fixed_t; y: fixed_t; line: Pdivline_t): integer;
+function P_PointOnDivlineSide32(x: fixed_t; y: fixed_t; line: Pdivline_t): integer;
 var
   dx: fixed_t;
   dy: fixed_t;
@@ -281,6 +311,70 @@ begin
     result := 1; // back side
 end;
 
+function P_PointOnDivlineSide64(x: fixed_t; y: fixed_t; line: Pdivline_t): integer;
+var
+  dx64: int64;
+  dy64: int64;
+  left64: int64;
+  right64: int64;
+begin
+  if line.dx = 0 then
+  begin
+    if x <= line.x then
+    begin
+      if line.dy > 0 then
+        result := 1
+      else
+        result := 0;
+    end
+    else
+    begin
+      if line.dy < 0 then
+        result := 1
+      else
+        result := 0;
+    end;
+    exit;
+  end;
+
+  if line.dy = 0 then
+  begin
+    if y <= line.y then
+    begin
+      if line.dx < 0 then
+        result := 1
+      else
+        result := 0;
+    end
+    else
+    begin
+      if line.dx > 0 then
+        result := 1
+      else
+        result := 0;
+    end;
+    exit;
+  end;
+
+  dx64 := int64(x) - int64(line.x);
+  dy64 := int64(y) - int64(line.y);
+
+  left64 := int64(line.dy) * (dx64 div 256);
+  right64 := (dy64 div 256) * int64(line.dx);
+
+  if right64 < left64 then
+    result := 0  // front side
+  else
+    result := 1; // back side
+end;
+
+function P_PointOnDivlineSide(x: fixed_t; y: fixed_t; line: Pdivline_t): integer;
+begin
+  if largemap then
+    result := P_PointOnDivlineSide64(x, y, line)
+  else
+    result := P_PointOnDivlineSide32(x, y, line);
+end;
 
 //
 // P_MakeDivline
@@ -346,9 +440,9 @@ begin
   back := linedef.backsector;
 
   if front.ceilingheight < back.ceilingheight then
-    opentop := front.ceilingheight + P_SectorJumpOverhead(front, nil)
+    opentop := front.ceilingheight + P_SectorJumpOverhead(front)
   else
-    opentop := back.ceilingheight + P_SectorJumpOverhead(back, nil);
+    opentop := back.ceilingheight + P_SectorJumpOverhead(back);
 
   if front.floorheight > back.floorheight then
   begin
@@ -460,9 +554,114 @@ begin
 
 
   if frontceilingheight < backceilingheight then
-    opentop := frontceilingheight + P_SectorJumpOverhead(front, nil)
+    opentop := frontceilingheight + P_SectorJumpOverhead(front)
   else
-    opentop := backceilingheight + P_SectorJumpOverhead(back, nil);
+    opentop := backceilingheight + P_SectorJumpOverhead(back);
+
+  if frontfloorheight > backfloorheight then
+  begin
+    openbottom := frontfloorheight;
+    lowfloor := backfloorheight;
+    tmfloorpic := front.floorpic;
+  end
+  else
+  begin
+    openbottom := backfloorheight;
+    lowfloor := frontfloorheight;
+    tmfloorpic := back.floorpic;
+  end;
+
+  // JVAL: 3d Floors
+  if check3dfloor then
+  begin
+    lowestceiling := opentop;
+    highestfloor := openbottom;
+    lowestfloor := lowfloor;
+    thingtop := tmthing.z + tmthing.height;
+    picfloor3d := tmfloorpic;
+    if front.midsec >= 0 then
+    begin
+      mid := @sectors[front.midsec];
+      rr := (mid.ceilingheight + mid.floorheight) div 2;
+      delta1 := abs(tmthing.z - rr);
+      delta2 := abs(thingtop - rr);
+      if (mid.floorheight < lowestceiling) and (delta1 >= delta2) then
+        lowestceiling := mid.floorheight;
+      if (mid.ceilingheight > highestfloor) and (delta1 < delta2) then
+      begin
+        highestfloor := mid.ceilingheight;
+        picfloor3d := mid.ceilingpic;
+      end
+      else if (mid.ceilingheight > lowestfloor) and (delta1 < delta2) then
+        lowestfloor := mid.ceilingheight;
+    end;
+    if back.midsec >= 0 then
+    begin
+      mid := @sectors[back.midsec];
+      rr := (mid.ceilingheight + mid.floorheight) div 2;
+      delta1 := abs(tmthing.z - rr);
+      delta2 := abs(thingtop - rr);
+      if (mid.floorheight < lowestceiling) and (delta1 >= delta2) then
+        lowestceiling := mid.floorheight;
+      if (mid.ceilingheight > highestfloor) and (delta1 < delta2) then
+      begin
+        highestfloor := mid.ceilingheight;
+        picfloor3d := mid.ceilingpic;
+      end
+      else if (mid.ceilingheight > lowestfloor) and (delta1 < delta2) then
+        lowestfloor := mid.ceilingheight;
+    end;
+    if highestfloor > openbottom then
+    begin
+      openbottom := highestfloor;
+      tmfloorpic := picfloor3d;
+    end;
+    if lowestceiling < opentop then
+      opentop := lowestceiling;
+    if lowestfloor > lowfloor then
+      lowfloor := lowestfloor;
+  end;
+
+  openrange := opentop - openbottom;
+end;
+
+// JVAL: VERSION 206
+procedure P_LineOpeningTM206(linedef: Pline_t; check3dfloor: boolean);
+var
+  front: Psector_t;
+  back: Psector_t;
+  mid: Psector_t;
+  lowestceiling: fixed_t;
+  highestfloor: fixed_t;
+  lowestfloor: fixed_t;
+  delta1, delta2, rr: fixed_t;
+  thingtop: fixed_t;
+  // JVAL: Slopes
+  frontfloorheight: fixed_t;
+  frontceilingheight: fixed_t;
+  backfloorheight: fixed_t;
+  backceilingheight: fixed_t;
+  picfloor3d: integer;
+begin
+  if linedef.sidenum[1] = -1 then
+  begin
+    // single sided line
+    openrange := 0;
+    exit;
+  end;
+
+  front := linedef.frontsector;
+  back := linedef.backsector;
+
+  frontfloorheight := P_ClosestFloorHeight(front, linedef, tmx, tmy);
+  frontceilingheight := P_ClosestCeilingHeight(front, linedef, tmx, tmy);
+  backfloorheight := P_ClosestFloorHeight(back, linedef, tmx, tmy);
+  backceilingheight := P_ClosestCeilingHeight(back, linedef, tmx, tmy);
+
+  if frontceilingheight < backceilingheight then
+    opentop := frontceilingheight + P_SectorJumpOverhead(front)
+  else
+    opentop := backceilingheight + P_SectorJumpOverhead(back);
 
   if frontfloorheight > backfloorheight then
   begin
@@ -603,7 +802,7 @@ begin
   ss := R_PointInSubsector(thing.x, thing.y);
   thing.subsector := ss;
 
-  if (thing.flags and MF_NOSECTOR) = 0 then
+  if thing.flags and MF_NOSECTOR = 0 then
   begin
     // invisible things don't go into the sector links
     sec := ss.sector;
@@ -621,8 +820,16 @@ begin
   if thing.flags and MF_NOBLOCKMAP = 0 then
   begin
     // inert things don't need to be in blockmap
-    blockx := MapBlockInt(thing.x - bmaporgx);
-    blocky := MapBlockInt(thing.y - bmaporgy);
+    if internalblockmapformat then
+    begin
+      blockx := MapBlockIntX(int64(thing.x) - int64(bmaporgx));
+      blocky := MapBlockIntY(int64(thing.y) - int64(bmaporgy));
+    end
+    else
+    begin
+      blockx := MapBlockInt(thing.x - bmaporgx);
+      blocky := MapBlockInt(thing.y - bmaporgy);
+    end;
     if (blockx >= 0) and (blockx < bmapwidth) and
        (blocky >= 0) and (blocky < bmapheight) then
     begin
@@ -669,7 +876,7 @@ end;
 //
 function P_BlockLinesIterator(x, y: integer; func: ltraverser_t): boolean;
 var
-  offset: PSmallInt;
+  offset: PInteger;
   ld: Pline_t;
   polyLink: Ppolyblock_t;
   tempSeg: PPseg_t;
@@ -759,7 +966,24 @@ end;
 // INTERCEPT ROUTINES
 //
 var
+  numintercepts: integer = 0;
+
   earlyout: boolean;
+
+procedure P_InitIntercepts;
+begin
+  intercepts := Z_Malloc(MAXINTERCEPTS * SizeOf(intercept_t), PU_LEVEL, nil);
+  numintercepts := MAXINTERCEPTS;
+end;
+
+procedure P_GrowIntercepts;
+begin
+  if intercept_p >= numintercepts then
+  begin
+    numintercepts := numintercepts + 64;
+    intercepts := Z_ReAlloc(intercepts, numintercepts * SizeOf(intercept_t), PU_LEVEL, nil);
+  end;
+end;
 
 //
 // PIT_AddLineIntercepts.
@@ -777,6 +1001,7 @@ var
   s2: integer;
   frac: fixed_t;
   dl: divline_t;
+  pinrc: Pintercept_t;
 begin
   // avoid precision problems with two routines
   if (trace.dx > FRACUNIT * 16) or (trace.dy > FRACUNIT * 16) or
@@ -814,9 +1039,11 @@ begin
     exit;
   end;
 
-  intercepts[intercept_p].frac := frac;
-  intercepts[intercept_p].isaline := true;
-  intercepts[intercept_p].d.line := ld;
+  P_GrowIntercepts;
+  pinrc := @intercepts[intercept_p];
+  pinrc.frac := frac;
+  pinrc.isaline := true;
+  pinrc.d.line := ld;
   inc(intercept_p);
 
   result := true; // continue
@@ -836,23 +1063,26 @@ var
   tracepositive: boolean;
   dl: divline_t;
   frac: fixed_t;
+  pinrc: Pintercept_t;
+  r: integer;
 begin
   tracepositive := (trace.dx xor trace.dy) > 0;
 
   // check a corner to corner crossection for hit
+  r := thing.radius;
   if tracepositive then
   begin
-    x1 := thing.x - thing.radius;
-    y1 := thing.y + thing.radius;
-    x2 := thing.x + thing.radius;
-    y2 := thing.y - thing.radius;
+    x1 := thing.x - r;
+    y1 := thing.y + r;
+    x2 := thing.x + r;
+    y2 := thing.y - r;
   end
   else
   begin
-    x1 := thing.x - thing.radius;
-    y1 := thing.y - thing.radius;
-    x2 := thing.x + thing.radius;
-    y2 := thing.y + thing.radius;
+    x1 := thing.x - r;
+    y1 := thing.y - r;
+    x2 := thing.x + r;
+    y2 := thing.y + r;
   end;
 
   s1 := P_PointOnDivlineSide(x1, y1, @trace);
@@ -877,9 +1107,11 @@ begin
     exit;
   end;
 
-  intercepts[intercept_p].frac := frac;
-  intercepts[intercept_p].isaline := false;
-  intercepts[intercept_p].d.thing := thing;
+  P_GrowIntercepts;
+  pinrc := @intercepts[intercept_p];
+  pinrc.frac := frac;
+  pinrc.isaline := false;
+  pinrc.d.thing := thing;
   inc(intercept_p);
 
   result := true; // keep going
@@ -936,7 +1168,7 @@ end;
 // Returns true if the traverser function returns true
 // for all lines.
 //
-function P_PathTraverse(x1, y1, x2, y2: fixed_t; flags: integer;
+function P_PathTraverse32(x1, y1, x2, y2: fixed_t; flags: integer;
   trav: traverser_t): boolean;
 var
   xt1: fixed_t;
@@ -1065,6 +1297,157 @@ begin
 
   // go through the sorted list
   result := P_TraverseIntercepts(trav, FRACUNIT);
+end;
+
+function P_PathTraverse64(x1, y1, x2, y2: fixed_t; flags: integer;
+  trav: traverser_t): boolean;
+var
+  _x1, _x2, _y1, _y2: int64;
+  xt1: fixed_t;
+  yt1: fixed_t;
+  xt2: fixed_t;
+  yt2: fixed_t;
+  xstep: fixed_t;
+  ystep: fixed_t;
+  partial: fixed_t;
+  xintercept: fixed_t;
+  yintercept: fixed_t;
+  mapx: integer;
+  mapx1: integer;
+  mapy: integer;
+  mapy1: integer;
+  mapxstep: integer;
+  mapystep: integer;
+  count: integer;
+begin
+  earlyout := flags and PT_EARLYOUT <> 0;
+
+  inc(validcount);
+  intercept_p := 0;
+
+  if (x1 - bmaporgx) and (MAPBLOCKSIZE - 1) = 0 then
+    x1 := x1 + FRACUNIT; // don't side exactly on a line
+
+  if (y1 - bmaporgy) and (MAPBLOCKSIZE - 1) = 0 then
+    y1 := y1 + FRACUNIT; // don't side exactly on a line
+
+  trace.x := x1;
+  trace.y := y1;
+  trace.dx := x2 - x1;
+  trace.dy := y2 - y1;
+
+  _x1 := int64(x1) - bmaporgx;
+  _y1 := int64(y1) - bmaporgy;
+  xt1 := _x1 shr MAPBLOCKSHIFT;
+  yt1 := _y1 shr MAPBLOCKSHIFT;
+
+  mapx1 := _x1 shr MAPBTOFRAC;
+  mapy1 := _y1 shr MAPBTOFRAC;
+
+  _x2 := int64(x2) - bmaporgx;
+  _y2 := int64(y2) - bmaporgy;
+  xt2 := _x2 shr MAPBLOCKSHIFT;
+  yt2 := _y2 shr MAPBLOCKSHIFT;
+
+  x1 := x1 - bmaporgx;
+  y1 := y1 - bmaporgy;
+  x2 := x2 - bmaporgx;
+  y2 := y2 - bmaporgy;
+
+  if xt2 > xt1 then
+  begin
+    mapxstep := 1;
+    partial := FRACUNIT - (mapx1 and (FRACUNIT - 1));
+    ystep := FixedDiv(y2 - y1, abs(x2 - x1));
+  end
+  else if xt2 < xt1 then
+  begin
+    mapxstep := -1;
+    partial := mapx1 and (FRACUNIT - 1);
+    ystep := FixedDiv(y2 - y1, abs(x2 - x1));
+  end
+  else
+  begin
+    mapxstep := 0;
+    partial := FRACUNIT;
+    ystep := 256 * FRACUNIT;
+  end;
+
+  yintercept := MapToFrac(y1) + FixedMul(partial, ystep);
+
+  if yt2 > yt1 then
+  begin
+    mapystep := 1;
+    partial := FRACUNIT - (mapy1 and (FRACUNIT - 1));
+    xstep := FixedDiv(x2 - x1, abs(y2 - y1));
+  end
+  else if yt2 < yt1 then
+  begin
+    mapystep := -1;
+    partial := mapy1 and (FRACUNIT - 1);
+    xstep := FixedDiv(x2 - x1, abs(y2 - y1));
+  end
+  else
+  begin
+    mapystep := 0;
+    partial := FRACUNIT;
+    xstep := 256 * FRACUNIT;
+  end;
+
+  xintercept := MapToFrac(x1) + FixedMul(partial, xstep);
+
+  // Step through map blocks.
+  // Count is present to prevent a round off error
+  // from skipping the break.
+  mapx := xt1;
+  mapy := yt1;
+
+  for count := 0 to 63 do
+  begin
+    if flags and PT_ADDLINES <> 0 then
+    begin
+      if not P_BlockLinesIterator(mapx, mapy, PIT_AddLineIntercepts) then
+      begin
+        result := false; // early out
+        exit;
+      end;
+    end;
+
+    if flags and PT_ADDTHINGS <> 0 then
+    begin
+      if not P_BlockThingsIterator(mapx, mapy, PIT_AddThingIntercepts) then
+      begin
+        result := false;// early out
+        exit;
+      end;
+    end;
+
+    if (mapx = xt2) and (mapy = yt2) then
+      break;
+
+    if FixedInt(yintercept) = mapy then
+    begin
+      yintercept := yintercept + ystep;
+      mapx := mapx + mapxstep;
+    end
+    else if FixedInt(xintercept) = mapx then
+    begin
+      xintercept := xintercept + xstep;
+      mapy := mapy + mapystep;
+    end;
+  end;
+
+  // go through the sorted list
+  result := P_TraverseIntercepts(trav, FRACUNIT);
+end;
+
+function P_PathTraverse(x1, y1, x2, y2: fixed_t; flags: integer;
+  trav: traverser_t): boolean;
+begin
+  if largemap or internalblockmapformat then
+    result := P_PathTraverse64(x1, y1, x2, y2, flags, trav)
+  else
+    result := P_PathTraverse32(x1, y1, x2, y2, flags, trav)
 end;
 
 //===========================================================================
@@ -1239,8 +1622,16 @@ var
   finalStop: integer;
   count: integer;
 begin
-  startX := MapBlockInt(mo.x - bmaporgx);
-  startY := MapBlockInt(mo.y - bmaporgy);
+  if internalblockmapformat then
+  begin
+    startX := MapBlockIntX(int64(mo.x) - int64(bmaporgx));
+    startY := MapBlockIntY(int64(mo.y) - int64(bmaporgy));
+  end
+  else
+  begin
+    startX := MapBlockInt(mo.x - bmaporgx);
+    startY := MapBlockInt(mo.y - bmaporgy);
+  end;
 
   if (startX >= 0) and (startX < bmapwidth) and (startY >= 0) and (startY < bmapheight) then
   begin

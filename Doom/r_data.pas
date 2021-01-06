@@ -151,6 +151,7 @@ uses
   r_slopes, // JVAL: Slopes
   r_patch,
 {$ENDIF}
+  r_flatinfo,
   v_data,
   v_video,
   vx_voxelsprite,
@@ -596,7 +597,8 @@ begin
   begin
     lump := R_GetLumpForFlat(flat);
     ds_source := W_CacheLumpNum(lump, PU_STATIC);
-    ds_scale := R_FlatScaleFromSize(W_LumpLength(lump));
+    ds_scale := R_FlatScaleFromSize(flat, W_LumpLength(lump));
+    ds_size := flats[flats[flat].translation].size;
   end
   else
     R_ReadDS32Cache(flat);
@@ -648,6 +650,8 @@ var
   numtextures2: integer;
   numtextures3: integer;
   directory: PIntegerArray;
+  t2lump: integer;
+  t3lump: integer;
   pname: string;
 begin
   {$IFNDEF OPENGL}
@@ -697,17 +701,19 @@ begin
   // Load the map texture definitions from textures.lmp.
   // The data is contained in one or two lumps,
   //  TEXTURE1 for shareware, plus TEXTURE2 for commercial.
+  // JVAL: TEXTURE3 for more textures
   maptex1 := W_CacheLumpName('TEXTURE1', PU_STATIC);
   maptex := maptex1;
   numtextures1 := maptex[0];
   maxoff := W_LumpLength(W_GetNumForName('TEXTURE1'));
   directory := PintegerArray(integer(maptex) + SizeOf(integer));
 
-  if W_CheckNumForName('TEXTURE2') <> -1 then
+  t2lump := W_CheckNumForName('TEXTURE2');
+  if t2lump <> -1 then
   begin
-    maptex2 := W_CacheLumpName('TEXTURE2', PU_STATIC);
+    maptex2 := W_CacheLumpNum(t2lump, PU_STATIC);
     numtextures2 := maptex2[0];
-    maxoff2 := W_LumpLength(W_GetNumForName('TEXTURE2'));
+    maxoff2 := W_LumpLength(t2lump);
   end
   else
   begin
@@ -716,11 +722,12 @@ begin
     maxoff2 := 0;
   end;
 
-  if W_CheckNumForName('TEXTURE3') <> -1 then
+  t3lump := W_CheckNumForName('TEXTURE3');
+  if t3lump <> -1 then
   begin
-    maptex3 := W_CacheLumpName('TEXTURE3', PU_STATIC);
+    maptex3 := W_CacheLumpNum(t3lump, PU_STATIC);
     numtextures3 := maptex3[0];
-    maxoff3 := W_LumpLength(W_GetNumForName('TEXTURE3'));
+    maxoff3 := W_LumpLength(t3lump);
   end
   else
   begin
@@ -857,7 +864,7 @@ begin
   numflats := lastflat - firstflat + 1;
 
   // Create translation table for global animation.
-  flats := malloc(numflats * SizeOf(pointer));
+  flats := mallocz(numflats * SizeOf(pointer));
 
   for i := 0 to numflats - 1 do
   begin
@@ -871,7 +878,9 @@ begin
     // JVAL: 9 December 2007, Added terrain types
     flat.terraintype := P_TerrainTypeForName(flat.name);
     flats[i] := flat;
+    flats[i].size := 0;
   end;
+  R_ParseFlatInfoLumps;
 end;
 
 //
@@ -1137,10 +1146,10 @@ begin
 
     // JVAL: Found a flat outside F_START, F_END
     result := numflats;
+    realloc(pointer(flats), numflats * SizeOf(pointer), (numflats + 1) * SizeOf(pointer));
     inc(numflats);
-    flats := Z_ReAlloc(flats, numflats * SizeOf(pointer), PU_STATIC, nil);
 
-    flats[result] := Z_Malloc(SizeOf(flat_t), PU_STATIC, nil);
+    flats[result] := malloc(SizeOf(flat_t));
     flats[result].name := W_GetNameForNum(i);
     flats[result].translation := result;
     flats[result].lump := i;
@@ -1190,10 +1199,10 @@ begin
 
     // JVAL: Found a flat outside F_START, F_END
     result := numflats;
+    realloc(pointer(flats), numflats * SizeOf(pointer), (numflats + 1) * SizeOf(pointer));
     inc(numflats);
-    flats := Z_ReAlloc(flats, numflats * SizeOf(pointer), PU_STATIC, nil);
 
-    flats[result] := Z_Malloc(SizeOf(flat_t), PU_STATIC, nil);
+    flats[result] := malloc(SizeOf(flat_t));
     flats[result].name := W_GetNameForNum(i);
     flats[result].translation := result;
     flats[result].lump := i;
@@ -1213,14 +1222,14 @@ begin
   else
   begin
     if (lump < 0) or (lump >= W_NumLumps) then
-      I_Error('R_FlatNumForLump(): Invalid lump = %d', [lump]);
+      I_Error('R_NewFlatNumForLump(): Invalid lump = %d', [lump]);
 
     // JVAL: Found a flat outside F_START, F_END
     result := numflats;
+    realloc(pointer(flats), numflats * SizeOf(pointer), (numflats + 1) * SizeOf(pointer));
     inc(numflats);
-    flats := Z_ReAlloc(flats, numflats * SizeOf(pointer), PU_STATIC, nil);
 
-    flats[result] := Z_Malloc(SizeOf(flat_t), PU_STATIC, nil);
+    flats[result] := malloc(SizeOf(flat_t));
     flats[result].name := W_GetNameForNum(lump);
     flats[result].translation := result;
     flats[result].lump := lump;
@@ -1229,6 +1238,7 @@ begin
     {$ENDIF}
     // JVAL: 9 December 2007, Added terrain types
     flats[result].terraintype := P_TerrainTypeForName(flats[result].name);
+    flats[result].size := 0;
   end
 end;
 

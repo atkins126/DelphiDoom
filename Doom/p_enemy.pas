@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -1526,10 +1526,20 @@ begin
     viletryx := actor.x + actor.info.speed * xspeed[actor.movedir];
     viletryy := actor.y + actor.info.speed * yspeed[actor.movedir];
 
-    xl := MapBlockInt(viletryx - bmaporgx - MAXRADIUS * 2);
-    xh := MapBlockInt(viletryx - bmaporgx + MAXRADIUS * 2);
-    yl := MapBlockInt(viletryy - bmaporgy - MAXRADIUS * 2);
-    yh := MapBlockInt(viletryy - bmaporgy + MAXRADIUS * 2);
+    if internalblockmapformat then
+    begin
+      xl := MapBlockIntX(int64(viletryx) - int64(bmaporgx) - MAXRADIUS * 2);
+      xh := MapBlockIntX(int64(viletryx) - int64(bmaporgx) + MAXRADIUS * 2);
+      yl := MapBlockIntY(int64(viletryy) - int64(bmaporgy) - MAXRADIUS * 2);
+      yh := MapBlockIntY(int64(viletryy) - int64(bmaporgy) + MAXRADIUS * 2);
+    end
+    else
+    begin
+      xl := MapBlockInt(viletryx - bmaporgx - MAXRADIUS * 2);
+      xh := MapBlockInt(viletryx - bmaporgx + MAXRADIUS * 2);
+      yl := MapBlockInt(viletryy - bmaporgy - MAXRADIUS * 2);
+      yh := MapBlockInt(viletryy - bmaporgy + MAXRADIUS * 2);
+    end;
 
     for bx := xl to xh do
     begin
@@ -1679,7 +1689,7 @@ begin
 
   S_StartSound(actor, Ord(sfx_barexp));
   P_DamageMobj(actor.target, actor, actor, 20);
-  actor.target.momz := 1000 * FRACUNIT div actor.target.info.mass;
+  actor.target.momz := 1000 * FRACUNIT div actor.target.mass;
 
   {$IFDEF FPC}
   an := _SHRW(actor.angle, ANGLETOFINESHIFT);

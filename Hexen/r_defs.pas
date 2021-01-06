@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Hexen source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -169,12 +169,22 @@ type
     saffectees: PIntegerArray;
     // JVAL: sector gravity (VERSION 204)
     gravity: fixed_t;
+    floorangle: angle_t; // JVAL: 20200221 - Texture angle
+    flooranglex: fixed_t; // JVAL: 20201229 - Texture angle rover
+    floorangley: fixed_t; // JVAL: 20201229 - Texture angle rover
+    ceilingangle: angle_t; // JVAL: 20200221 - Texture angle
+    ceilinganglex: fixed_t; // JVAL: 20201229 - Texture angle rover
+    ceilingangley: fixed_t; // JVAL: 20201229 - Texture angle rover
 {$IFDEF OPENGL}
     no_toptextures: boolean;
     no_bottomtextures: boolean;
 {$ELSE}
+    // [kb] For R_WiggleFix
     cachedheight: integer;
     scaleindex: integer;
+    // JVAL: 20201225 - Speed up maps with large number of slopes
+    floorvisslope: integer;
+    ceilingvisslope: integer;
 {$ENDIF}
   end;
   sector_tArray = packed array[0..$FFFF] of sector_t;
@@ -224,7 +234,7 @@ type
     dy: fixed_t;
 
     // Animation related.
-    flags: smallint;
+    flags: word;
     special: byte;
     arg1, arg2, arg3, arg4, arg5: byte;
 
@@ -274,6 +284,9 @@ const
   SRF_SLOPEFLOOR = 32; // JVAL: Slopes
   SRF_SLOPECEILING = 64; // JVAL: Slopes
   SRF_SLOPED = SRF_SLOPEFLOOR + SRF_SLOPECEILING; // JVAL: Slopes
+  SRF_INTERPOLATE_ROTATE = 512;
+  SRF_INTERPOLATE_FLOORSLOPE = 1024;
+  SRF_INTERPOLATE_CEILINGSLOPE = 2048;
 
 const
   // Vissprite render flags
@@ -326,6 +339,7 @@ type
     length: single;
     iSegID: integer;
 {$ELSE}
+    map_length: integer;
     inv_length: double;      
 {$ENDIF}
     miniseg: boolean;
@@ -647,6 +661,7 @@ type
     terraintype: integer; // JVAL: 9 December 2007, Added terrain types
     translation: integer;
     lump: integer;
+    size: integer;
   end;
   Pflat_t = ^flat_t;
   flatPArray = array[0..$FFFF] of Pflat_t;

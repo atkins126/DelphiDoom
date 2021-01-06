@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -323,6 +323,30 @@ procedure A_TraceNearestPlayer(actor: Pmobj_t);
 
 procedure A_ChangeFlag(actor: Pmobj_t);
 
+procedure A_CheckFloor(actor: Pmobj_t);
+
+procedure A_CheckCeiling(actor: Pmobj_t);
+
+procedure A_StopSound(actor: Pmobj_t);
+
+procedure A_JumpIfTargetOutsideMeleeRange(actor: Pmobj_t);
+
+procedure A_JumpIfTargetInsideMeleeRange(actor: Pmobj_t);
+
+procedure A_JumpIfTracerCloser(actor: Pmobj_t);
+
+procedure A_SetMass(actor: Pmobj_t);
+
+procedure A_SetTargetMass(actor: Pmobj_t);
+
+procedure A_SetTracerMass(actor: Pmobj_t);
+
+procedure A_CheckSight(actor: Pmobj_t);
+
+procedure A_CheckSightOrRange(actor: Pmobj_t);
+
+procedure A_CheckRange(actor: Pmobj_t);
+
 const
   FLOATBOBSIZE = 64;
   FLOATBOBMASK = FLOATBOBSIZE - 1;
@@ -375,6 +399,7 @@ uses
   p_map,
   p_maputl,
   p_params,
+  p_sight,
   psi_globals,
   r_renderstyle,
   r_main,
@@ -3485,6 +3510,247 @@ begin
     exit;
   end;
 
+end;
+
+procedure A_CheckFloor(actor: Pmobj_t);
+var
+  offset: integer;
+begin
+  if not P_CheckStateParams(actor, 1) then
+    exit;
+
+  if actor.z <= actor.floorz then
+  begin
+    offset := P_GetStateFromNameWithOffsetCheck(actor, actor.state.params.StrVal[0]);
+    if @states[offset] <> actor.state then
+      P_SetMobjState(actor, statenum_t(offset));
+  end;
+end;
+
+procedure A_CheckCeiling(actor: Pmobj_t);
+var
+  offset: integer;
+begin
+  if not P_CheckStateParams(actor, 1) then
+    exit;
+
+  if actor.z >= actor.ceilingz then
+  begin
+    offset := P_GetStateFromNameWithOffsetCheck(actor, actor.state.params.StrVal[0]);
+    if @states[offset] <> actor.state then
+      P_SetMobjState(actor, statenum_t(offset));
+  end;
+end;
+
+procedure A_StopSound(actor: Pmobj_t);
+begin
+  S_StopSound(actor);
+end;
+
+procedure A_JumpIfTargetOutsideMeleeRange(actor: Pmobj_t);
+var
+  offset: integer;
+begin
+  if not P_CheckStateParams(actor, 1) then
+    exit;
+
+  if not P_CheckMeleeRange(actor) then
+  begin
+    offset := P_GetStateFromNameWithOffsetCheck(actor, actor.state.params.StrVal[0]);
+    if @states[offset] <> actor.state then
+      P_SetMobjState(actor, statenum_t(offset));
+  end;
+end;
+
+procedure A_JumpIfTargetInsideMeleeRange(actor: Pmobj_t);
+var
+  offset: integer;
+begin
+  if not P_CheckStateParams(actor, 1) then
+    exit;
+
+  if P_CheckMeleeRange(actor) then
+  begin
+    offset := P_GetStateFromNameWithOffsetCheck(actor, actor.state.params.StrVal[0]);
+    if @states[offset] <> actor.state then
+      P_SetMobjState(actor, statenum_t(offset));
+  end;
+end;
+
+//
+// A_JumpIfTracerCloser(distancetotarget: float, offset: integer)
+//
+procedure A_JumpIfTracerCloser(actor: Pmobj_t);
+var
+  dist: fixed_t;
+  offset: integer;
+begin
+  if not P_CheckStateParams(actor, 2) then
+    exit;
+
+  // No tracer - no jump
+  if actor.tracer = nil then
+    exit;
+
+  dist := actor.state.params.FixedVal[0];
+  if P_AproxDistance(actor.x - actor.tracer.x, actor.y - actor.tracer.y) < dist then
+  begin
+    offset := P_GetStateFromNameWithOffsetCheck(actor, actor.state.params.StrVal[1]);
+    if @states[offset] <> actor.state then
+      P_SetMobjState(actor, statenum_t(offset));
+  end;
+end;
+
+//
+// A_SetMass(mass: integer)
+//
+procedure A_SetMass(actor: Pmobj_t);
+begin
+  if not P_CheckStateParams(actor, 1) then
+    exit;
+
+  actor.mass := actor.state.params.IntVal[0];
+end;
+
+//
+// A_SetTargetMass(mass: integer)
+//
+procedure A_SetTargetMass(actor: Pmobj_t);
+begin
+  if not P_CheckStateParams(actor, 1) then
+    exit;
+
+  if actor.target = nil then
+    exit;
+
+  actor.target.mass := actor.state.params.IntVal[0];
+end;
+
+//
+// A_SetTracerMass(mass: integer)
+//
+procedure A_SetTracerMass(actor: Pmobj_t);
+begin
+  if not P_CheckStateParams(actor, 1) then
+    exit;
+
+  if actor.tracer = nil then
+    exit;
+
+  actor.tracer.mass := actor.state.params.IntVal[0];
+end;
+
+//
+// A_CheckSight(offset: integer)
+// Jumps to offset if no player can see this actor
+//
+procedure A_CheckSight(actor: Pmobj_t);
+var
+  i: integer;
+  offset: integer;
+begin
+  if not P_CheckStateParams(actor, 1) then
+    exit;
+
+  for i := 0 to MAXPLAYERS - 1 do
+    if playeringame[i] then
+      if players[i].mo <> actor then
+        if P_CheckSight(players[i].mo, actor) then
+          exit;
+
+  offset := P_GetStateFromNameWithOffsetCheck(actor, actor.state.params.StrVal[0]);
+  if @states[offset] <> actor.state then
+    P_SetMobjState(actor, statenum_t(offset));
+end;
+
+//
+// A_CheckSightOrRange(distance: float; offset: integer; [twodi: boolean=false])
+// Jumps to offset if no player can see this actor or out of player range
+//
+procedure A_CheckSightOrRange(actor: Pmobj_t);
+var
+  i: integer;
+  offset: integer;
+  distance: fixed64_t;
+  range: fixed64_t;
+  twodi: boolean;
+  dx, dy, dz: fixed64_t;
+begin
+  if not P_CheckStateParams(actor, 2, CSP_AT_LEAST) then
+    exit;
+
+  distance := actor.state.params.FixedVal[0];
+  distance := FixedMul64(distance, distance);
+  twodi := actor.state.params.BoolVal[2];
+
+  for i := 0 to MAXPLAYERS - 1 do
+    if playeringame[i] then
+      if players[i].mo <> actor then
+      begin
+        dx := players[i].mo.x - actor.x;
+        dy := players[i].mo.y - actor.y;
+        if twodi then
+        begin
+          dz := players[i].mo.z - actor.z;
+          range := FixedMul64(dx, dx) + FixedMul64(dy, dy) + FixedMul64(dz, dz);
+        end
+        else
+          range := FixedMul64(dx, dx) + FixedMul64(dy, dy);
+        if distance <= range then
+          exit;
+      end;
+
+  for i := 0 to MAXPLAYERS - 1 do
+    if playeringame[i] then
+      if players[i].mo <> actor then
+        if P_CheckSight(players[i].mo, actor) then
+          exit;
+
+  offset := P_GetStateFromNameWithOffsetCheck(actor, actor.state.params.StrVal[1]);
+  if @states[offset] <> actor.state then
+    P_SetMobjState(actor, statenum_t(offset));
+end;
+
+//
+// A_CheckRange(distance: float; offset: integer; [twodi: boolean=false])
+// Jumps to offset if out of player range
+//
+procedure A_CheckRange(actor: Pmobj_t);
+var
+  i: integer;
+  offset: integer;
+  distance: fixed64_t;
+  range: fixed64_t;
+  twodi: boolean;
+  dx, dy, dz: fixed64_t;
+begin
+  if not P_CheckStateParams(actor, 2, CSP_AT_LEAST) then
+    exit;
+
+  distance := actor.state.params.FixedVal[0];
+  distance := FixedMul64(distance, distance);
+  twodi := actor.state.params.BoolVal[2];
+
+  for i := 0 to MAXPLAYERS - 1 do
+    if playeringame[i] then
+      if players[i].mo <> actor then
+      begin
+        dx := players[i].mo.x - actor.x;
+        dy := players[i].mo.y - actor.y;
+        if twodi then
+        begin
+          dz := players[i].mo.z - actor.z;
+          range := FixedMul64(dx, dx) + FixedMul64(dy, dy) + FixedMul64(dz, dz);
+        end
+        else
+          range := FixedMul64(dx, dx) + FixedMul64(dy, dy);
+        if distance <= range then
+          exit;
+      end;
+
+  offset := P_GetStateFromNameWithOffsetCheck(actor, actor.state.params.StrVal[1]);
+  if @states[offset] <> actor.state then
+    P_SetMobjState(actor, statenum_t(offset));
 end;
 
 end.

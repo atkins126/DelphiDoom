@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Heretic source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -61,9 +61,9 @@ function P_SpawnMobj(x, y, z: fixed_t; _type: integer; const mthing: Pmapthing_t
 
 procedure P_RemoveMobj(mobj: Pmobj_t);
 
-procedure P_SpawnPlayer(mthing: Pmapthing_t);
+function P_SpawnPlayer(mthing: Pmapthing_t): Pmobj_t;
 
-procedure P_SpawnMapThing(mthing: Pmapthing_t);
+function P_SpawnMapThing(mthing: Pmapthing_t): Pmobj_t;
 
 procedure P_SpawnPuff(x, y, z: fixed_t);
 
@@ -653,7 +653,11 @@ begin
         // after hitting the ground (hard),
         // and utter appropriate sound.
         player.deltaviewheight := _SHR(mo.momz, 3);
-        S_StartSound(mo, Ord(sfx_plroof));
+        if leveltime > player.nextoof then
+        begin
+          S_StartSound(mo, Ord(sfx_plroof));
+          player.nextoof := leveltime + 4 * TICRATE;
+        end;
       end;
       mo.momz := 0;
     end;
@@ -1028,6 +1032,7 @@ begin
   if (mobj.flags2 and MF2_FLOATBOB <> 0) or (mobj.flags_ex and MF_EX_FLOATBOB <> 0) then
     mobj.bob := P_Random and FLOATBOBMASK;
   mobj.health := info.spawnhealth;
+  mobj.mass := info.mass;
 
   if gameskill <> sk_nightmare then
     mobj.reactiontime := info.reactiontime;
@@ -1266,17 +1271,17 @@ end;
 // Most of the player structure stays unchanged
 //  between levels.
 //
-procedure P_SpawnPlayer(mthing: Pmapthing_t);
+function P_SpawnPlayer(mthing: Pmapthing_t): Pmobj_t;
 var
   p: Pplayer_t;
   x: fixed_t;
   y: fixed_t;
   z: fixed_t;
-  mobj: Pmobj_t;
   i: integer;
   plnum: integer;
   ss: Psubsector_t;
 begin
+  result := nil;
   // not playing?
   if not playeringame[mthing._type - 1] then
     exit;
@@ -1297,21 +1302,20 @@ begin
     if mthing.options and MTF_ONMIDSECTOR <> 0 then
       z := sectors[ss.sector.midsec].ceilingheight;
 
+  result := P_SpawnMobj(x, y, z, Ord(MT_PLAYER), @mthing);
 
-  mobj := P_SpawnMobj(x, y, z, Ord(MT_PLAYER), @mthing);
-
-    // set color translations for player sprites
+  // set color translations for player sprites
   if mthing._type > 1 then
-    mobj.flags := mobj.flags or _SHL(plnum, MF_TRANSSHIFT);
+    result.flags := result.flags or _SHL(plnum, MF_TRANSSHIFT);
 
-  if mobj.flags2_ex and MF2_EX_PRECISESPAWNANGLE <> 0 then
-    mobj.angle := ANG1 * mthing.angle
+  if result.flags2_ex and MF2_EX_PRECISESPAWNANGLE <> 0 then
+    result.angle := ANG1 * mthing.angle
   else
-    mobj.angle := ANG45 * (mthing.angle div 45);
-  mobj.player := p;
-  mobj.health := p.health;
+    result.angle := ANG45 * (mthing.angle div 45);
+  result.player := p;
+  result.health := p.health;
 
-  p.mo := mobj;
+  p.mo := result;
   p.playerstate := PST_LIVE;
   p.refire := 0;
   p._message := '';
@@ -1343,11 +1347,10 @@ end;
 // The fields of the mapthing should
 // already be in host byte order.
 //
-procedure P_SpawnMapThing(mthing: Pmapthing_t);
+function P_SpawnMapThing(mthing: Pmapthing_t): Pmobj_t;
 var
   i: integer;
   bit: integer;
-  mobj: Pmobj_t;
   x: fixed_t;
   y: fixed_t;
   z: fixed_t;
@@ -1355,6 +1358,7 @@ var
   msec: Psector_t;  // JVAL: 3d floors
   musinfoparam: integer;
 begin
+  result := nil;
   // Count deathmatch start positions
   if mthing._type = 11 then
   begin
@@ -1372,7 +1376,7 @@ begin
     // save spots for respawning in network games
     playerstarts[mthing._type - 1] := mthing^;
     if deathmatch = 0 then
-      P_SpawnPlayer(mthing);
+      result := P_SpawnPlayer(mthing);
     exit;
   end;
 
@@ -1391,7 +1395,7 @@ begin
   end;
 
   // check for apropriate skill level
-  if (not netgame) and ((mthing.options and 16) <> 0) then
+  if (not netgame) and (mthing.options and 16 <> 0) then
     exit;
 
   if gameskill = sk_baby then
@@ -1495,29 +1499,29 @@ begin
     end;
   end;
 
-  mobj := P_SpawnMobj(x, y, z, i, mthing);
-  mobj.spawnpoint := mthing^;
+  result := P_SpawnMobj(x, y, z, i, mthing);
+  result.spawnpoint := mthing^;
 
   if musinfoparam >= 0 then
-    P_SetMobjCustomParam(mobj, S_MUSINFO_PARAM, musinfoparam);
+    P_SetMobjCustomParam(result, S_MUSINFO_PARAM, musinfoparam);
 
-  if mobj.tics > 0 then
-    mobj.tics := 1 + (P_Random mod mobj.tics);
-  if mobj.flags and MF_COUNTKILL <> 0 then
+  if result.tics > 0 then
+    result.tics := 1 + (P_Random mod result.tics);
+  if result.flags and MF_COUNTKILL <> 0 then
     inc(totalkills);
-  if mobj.flags and MF_COUNTITEM <> 0 then
+  if result.flags and MF_COUNTITEM <> 0 then
     inc(totalitems);
 
-  if mobj.flags2_ex and MF2_EX_PRECISESPAWNANGLE <> 0 then
-    mobj.angle := ANG1 * mthing.angle
+  if result.flags2_ex and MF2_EX_PRECISESPAWNANGLE <> 0 then
+    result.angle := ANG1 * mthing.angle
   else
-    mobj.angle := ANG45 * (mthing.angle div 45);
+    result.angle := ANG45 * (mthing.angle div 45);
 
   if mthing.options and MTF_DONOTTRIGGERSCRIPTS <> 0 then
-    mobj.flags2_ex := mobj.flags2_ex or MF2_EX_DONTRUNSCRIPTS;
+    result.flags2_ex := result.flags2_ex or MF2_EX_DONTRUNSCRIPTS;
 
   if mthing.options and MTF_AMBUSH <> 0 then
-    mobj.flags := mobj.flags or MF_AMBUSH;
+    result.flags := result.flags or MF_AMBUSH;
 end;
 
 //

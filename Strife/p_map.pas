@@ -10,7 +10,7 @@
 //  Copyright (C) 1993-1996 by id Software, Inc.
 //  Copyright (C) 2005 Simon Howard
 //  Copyright (C) 2010 James Haley, Samuel Villarreal
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -256,10 +256,20 @@ begin
   numspechit := 0;
 
   // stomp on any things contacted
-  xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS);
-  xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
-  yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
-  yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
+  if internalblockmapformat then
+  begin
+    xl := MapBlockIntX(int64(tmbbox[BOXLEFT]) - int64(bmaporgx) - MAXRADIUS);
+    xh := MapBlockIntX(int64(tmbbox[BOXRIGHT]) - int64(bmaporgx) + MAXRADIUS);
+    yl := MapBlockIntY(int64(tmbbox[BOXBOTTOM]) - int64(bmaporgy) - MAXRADIUS);
+    yh := MapBlockIntY(int64(tmbbox[BOXTOP]) - int64(bmaporgy) + MAXRADIUS);
+  end
+  else
+  begin
+    xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS);
+    xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
+    yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
+    yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
+  end;
 
   for bx := xl to xh do
     for by := yl to yh do
@@ -393,7 +403,6 @@ begin
     spechit[numspechit] := ld;
     inc(numspechit);
 
-//    fprintf(stderr, 'numspechit = %d' + #13#10, [numspechit]);
   end;
 
   result := true;
@@ -411,6 +420,13 @@ begin
     exit;
   end;
 
+  // JVAL: VERSION 206 
+  if ld.flags and ML_NOCLIP <> 0 then
+  begin
+    result := true;
+    exit;
+  end;
+  
   if P_BoxOnLineSide(@tmbbox, ld) <> -1 then
   begin
     result := true;
@@ -462,7 +478,10 @@ begin
   end;
 
   // set openrange, opentop, openbottom
-  P_LineOpeningTM(ld, true);
+{  if G_PlayingEngineVersion >= VERSION205 then
+    P_LineOpeningTM206(ld, true)
+  else}
+    P_LineOpeningTM(ld, true);
 
   // adjust floor / ceiling heights
   if opentop < tmceilingz then
@@ -554,6 +573,13 @@ begin
     exit;
   end;
 
+  // don't clip against self
+  if thing = tmthing then
+  begin
+    result := true;
+    exit;
+  end;
+
   if G_PlayingEngineVersion >= VERSION205 then
     if (thing.player <> nil) or (tmthing.player <> nil) then  // Only if a player is involved
       if not P_ThingsInSameZ(thing, tmthing) then // JVAL: 20200413 -> Check z axis
@@ -561,13 +587,6 @@ begin
         result := true;
         exit;
       end;
-
-  // don't clip against self
-  if thing = tmthing then
-  begin
-    result := true;
-    exit;
-  end;
 
   // JVAL: 20200130 - MF2_EX_DONTBLOCKPLAYER flag - does not block players
   if (thing.flags2_ex and MF2_EX_DONTBLOCKPLAYER <> 0) and (tmthing.player <> nil) then
@@ -594,13 +613,6 @@ begin
   // JVAL: 3d Floors
   if G_PlayingEngineVersion >= VERSION122 then
   begin
-{    if Psubsector_t(tmthing.subsector).sector = Psubsector_t(thing.subsector).sector then
-      if tmthing.floorz <> thing.floorz then
-      begin
-        result := true;
-        exit;
-      end;
-                                                             }
     if (tmthing.player <> nil) or (thing.player <> nil) then
       if tmfloorz <> thing.floorz then
       begin
@@ -663,7 +675,7 @@ begin
     if thing.flags and MF_SHOOTABLE = 0 then
     begin
       // didn't do any damage
-      result := (thing.flags and MF_SOLID) = 0;
+      result := thing.flags and MF_SOLID = 0;
       exit;
     end;
 
@@ -800,10 +812,20 @@ begin
   // because mobj_ts are grouped into mapblocks
   // based on their origin point, and can overlap
   // into adjacent blocks by up to MAXRADIUS units.
-  xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS);
-  xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
-  yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
-  yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
+  if internalblockmapformat then
+  begin
+    xl := MapBlockIntX(int64(tmbbox[BOXLEFT]) - int64(bmaporgx) - MAXRADIUS);
+    xh := MapBlockIntX(int64(tmbbox[BOXRIGHT]) - int64(bmaporgx) + MAXRADIUS);
+    yl := MapBlockIntY(int64(tmbbox[BOXBOTTOM]) - int64(bmaporgy) - MAXRADIUS);
+    yh := MapBlockIntY(int64(tmbbox[BOXTOP]) - int64(bmaporgy) + MAXRADIUS);
+  end
+  else
+  begin
+    xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS);
+    xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
+    yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
+    yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
+  end;
 
   for bx := xl to xh do
     for by := yl to yh do
@@ -814,10 +836,20 @@ begin
       end;
 
   // check lines
-  xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx);
-  xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx);
-  yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy);
-  yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy);
+  if internalblockmapformat then
+  begin
+    xl := MapBlockIntX(int64(tmbbox[BOXLEFT]) - int64(bmaporgx));
+    xh := MapBlockIntX(int64(tmbbox[BOXRIGHT]) - int64(bmaporgx));
+    yl := MapBlockIntY(int64(tmbbox[BOXBOTTOM]) - int64(bmaporgy));
+    yh := MapBlockIntY(int64(tmbbox[BOXTOP]) - int64(bmaporgy));
+  end
+  else
+  begin
+    xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx);
+    xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx);
+    yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy);
+    yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy);
+  end;
 
   // JVAL: Slopes
   if G_PlayingEngineVersion >= VERSION122 then
@@ -1074,10 +1106,20 @@ begin
   // based on their origin point, and can overlap
   // into adjacent blocks by up to MAXRADIUS units.
 
-  xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS);
-  xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
-  yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
-  yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
+  if internalblockmapformat then
+  begin
+    xl := MapBlockIntX(int64(tmbbox[BOXLEFT]) - int64(bmaporgx) - MAXRADIUS);
+    xh := MapBlockIntX(int64(tmbbox[BOXRIGHT]) - int64(bmaporgx) + MAXRADIUS);
+    yl := MapBlockIntY(int64(tmbbox[BOXBOTTOM]) - int64(bmaporgy) - MAXRADIUS);
+    yh := MapBlockIntY(int64(tmbbox[BOXTOP]) - int64(bmaporgy) + MAXRADIUS);
+  end
+  else
+  begin
+    xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS);
+    xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
+    yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
+    yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
+  end;
 
   for bx := xl to xh do
     for by := yl to yh do
@@ -1649,17 +1691,17 @@ begin
       exit;
     end;
 
+    if li.backsector = nil then
+    begin
+      result := hitline(false);
+      exit;
+    end;
+
     // crosses a two sided line
     P_LineOpening(li, false);
 
     dist := FixedMul(attackrange, intr.frac);
 
-    if li.backsector = nil then
-    begin
-      result := hitline(true);
-      exit;
-    end;
-    
     if li.frontsector.floorheight <> li.backsector.floorheight then
     begin
       slope := FixedDiv(openbottom - shootz, dist);
@@ -1977,6 +2019,7 @@ begin
 
   x2 := x1 + USERANGEINT * finecosine[angle];
   y2 := y1 + USERANGEINT * finesine[angle];
+
   P_PathTraverse(x1, y1, x2, y2, PT_ADDLINES, PTR_UseTraverse);
 end;
 
@@ -2096,10 +2139,20 @@ var
   dist: fixed_t;
 begin
   dist := (damage + MAXRADIUS) * FRACUNIT;
-  yh := MapBlockInt(spot.y + dist - bmaporgy);
-  yl := MapBlockInt(spot.y - dist - bmaporgy);
-  xh := MapBlockInt(spot.x + dist - bmaporgx);
-  xl := MapBlockInt(spot.x - dist - bmaporgx);
+  if internalblockmapformat then
+  begin
+    yh := MapBlockIntY(int64(spot.y) + int64(dist) - int64(bmaporgy));
+    yl := MapBlockIntY(int64(spot.y) - int64(dist) - int64(bmaporgy));
+    xh := MapBlockIntX(int64(spot.x) + int64(dist) - int64(bmaporgx));
+    xl := MapBlockIntX(int64(spot.x) - int64(dist) - int64(bmaporgx));
+  end
+  else
+  begin
+    yh := MapBlockInt(spot.y + dist - bmaporgy);
+    yl := MapBlockInt(spot.y - dist - bmaporgy);
+    xh := MapBlockInt(spot.x + dist - bmaporgx);
+    xl := MapBlockInt(spot.x - dist - bmaporgx);
+  end;
   bombspot := spot;
   bombsource := source;
   bombdamage := damage;
@@ -2133,10 +2186,20 @@ var
   dist: fixed_t;
 begin
   dist := distance * FRACUNIT;
-  yh := MapBlockInt(spot.y + dist - bmaporgy);
-  yl := MapBlockInt(spot.y - dist - bmaporgy);
-  xh := MapBlockInt(spot.x + dist - bmaporgx);
-  xl := MapBlockInt(spot.x - dist - bmaporgx);
+  if internalblockmapformat then
+  begin
+    yh := MapBlockIntY(int64(spot.y) + int64(dist) - int64(bmaporgy));
+    yl := MapBlockIntY(int64(spot.y) - int64(dist) - int64(bmaporgy));
+    xh := MapBlockIntX(int64(spot.x) + int64(dist) - int64(bmaporgx));
+    xl := MapBlockIntX(int64(spot.x) - int64(dist) - int64(bmaporgx));
+  end
+  else
+  begin
+    yh := MapBlockInt(spot.y + dist - bmaporgy);
+    yl := MapBlockInt(spot.y - dist - bmaporgy);
+    xh := MapBlockInt(spot.x + dist - bmaporgx);
+    xl := MapBlockInt(spot.x - dist - bmaporgx);
+  end;
   bombspot := spot;
   bombsource := source;
   bombdamage := damage;
@@ -2558,10 +2621,20 @@ begin
 
   inc(validcount); // used to make sure we only process a line once
 
-  xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx);
-  xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx);
-  yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy);
-  yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy);
+  if internalblockmapformat then
+  begin
+    xl := MapBlockIntX(int64(tmbbox[BOXLEFT]) - int64(bmaporgx));
+    xh := MapBlockIntX(int64(tmbbox[BOXRIGHT]) - int64(bmaporgx));
+    yl := MapBlockIntY(int64(tmbbox[BOXBOTTOM]) - int64(bmaporgy));
+    yh := MapBlockIntY(int64(tmbbox[BOXTOP]) - int64(bmaporgy));
+  end
+  else
+  begin
+    xl := MapBlockInt(tmbbox[BOXLEFT] - bmaporgx);
+    xh := MapBlockInt(tmbbox[BOXRIGHT] - bmaporgx);
+    yl := MapBlockInt(tmbbox[BOXBOTTOM] - bmaporgy);
+    yh := MapBlockInt(tmbbox[BOXTOP] - bmaporgy);
+  end;
 
   for bx := xl to xh do
     for by := yl to yh do

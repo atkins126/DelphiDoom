@@ -10,7 +10,7 @@
 //  Copyright (C) 1993-1996 by id Software, Inc.
 //  Copyright (C) 2005 Simon Howard
 //  Copyright (C) 2010 James Haley, Samuel Villarreal
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -568,7 +568,11 @@ begin
         // damaging falls (moved outside the above if).
         Pplayer_t(mo.player).centerview := true;
 
-        S_StartSound(mo, Ord(sfx_oof));
+        if leveltime > player.nextoof then
+        begin
+          S_StartSound(mo, Ord(sfx_oof));
+          player.nextoof := leveltime + 4 * TICRATE;
+        end;
       end;
       mo.momz := 0;
     end;
@@ -894,6 +898,7 @@ begin
   if mobj.flags_ex and MF_EX_FLOATBOB <> 0 then
     mobj.bob := N_Random and FLOATBOBMASK;
   mobj.health := info.spawnhealth;
+  mobj.mass := info.mass;
 
   mobj.reactiontime := info.reactiontime;
 

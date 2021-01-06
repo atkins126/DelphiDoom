@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Heretic source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -314,6 +314,7 @@ uses
   d_net,
   i_io,
   mt_utils,
+  mn_screenshot,
   m_bbox,
   m_menu,
   m_misc,
@@ -364,8 +365,10 @@ uses
   r_wall32,
   r_flat8,
   r_flat32,
+  r_flat32_ripple,
   r_span,
   r_span32,
+  r_span32_ripple,
   r_column,
   r_tallcolumn,
   r_batchcolumn,
@@ -434,7 +437,7 @@ end;
 //  check point against partition plane.
 // Returns side 0 (front) or 1 (back).
 //
-function R_PointOnSide(const x: fixed_t; const y: fixed_t; const node: Pnode_t): boolean;
+function R_PointOnSide32(const x: fixed_t; const y: fixed_t; const node: Pnode_t): boolean;
 var
   dx: fixed_t;
   dy: fixed_t;
@@ -475,7 +478,49 @@ begin
   result := right >= left;
 end;
 
-function R_PointOnSegSide(x: fixed_t; y: fixed_t; line: Pseg_t): boolean;
+function R_PointOnSide64(const x: fixed_t; const y: fixed_t; const node: Pnode_t): boolean;
+var
+  dx64: int64;
+  dy64: int64;
+  left64: int64;
+  right64: int64;
+begin
+  if node.dx = 0 then
+  begin
+    if x <= node.x then
+      result := node.dy > 0
+    else
+      result := node.dy < 0;
+    exit;
+  end;
+
+  if node.dy = 0 then
+  begin
+    if y <= node.y then
+      result := node.dx < 0
+    else
+      result := node.dx > 0;
+    exit;
+  end;
+
+  dx64 := int64(x) - int64(node.x);
+  dy64 := int64(y) - int64(node.y);
+
+  left64 := int64(node.dy div 256) * (dx64 div 256);
+  right64 := (dy64 div 256) * int64(node.dx div 256);
+
+  result := right64 >= left64;
+end;
+
+function R_PointOnSide(const x: fixed_t; const y: fixed_t; const node: Pnode_t): boolean;
+begin
+  if largemap then
+    result := R_PointOnSide64(x, y, node)
+  else
+    result := R_PointOnSide32(x, y, node);
+end;
+
+function R_PointOnSegSide32(x: fixed_t; y: fixed_t; line: Pseg_t): boolean;
 var
   lx: fixed_t;
   ly: fixed_t;
@@ -524,6 +569,58 @@ begin
   right := FixedIntMul(dy, ldx);
 
   result := left <= right;
+end;
+
+function R_PointOnSegSide64(x: fixed_t; y: fixed_t; line: Pseg_t): boolean;
+var
+  lx: fixed_t;
+  ly: fixed_t;
+  ldx: fixed_t;
+  ldy: fixed_t;
+  dx64: int64;
+  dy64: int64;
+  left64: int64;
+  right64: int64;
+begin
+  lx := line.v1.x;
+  ly := line.v1.y;
+
+  ldx := line.v2.x - lx;
+  ldy := line.v2.y - ly;
+
+  if ldx = 0 then
+  begin
+    if x <= lx then
+      result := ldy > 0
+    else
+      result := ldy < 0;
+    exit;
+  end;
+
+  if ldy = 0 then
+  begin
+    if y <= ly then
+      result := ldx < 0
+    else
+      result := ldx > 0;
+    exit;
+  end;
+
+  dx64 := int64(x) - int64(lx);
+  dy64 := int64(y) - int64(ly);
+
+  left64 := int64(ldy div 256) * (dx64 div 256);
+  right64 := (dy64 div 256) * int64(ldx div 256);
+
+  result := left64 <= right64;
+end;
+
+function R_PointOnSegSide(x: fixed_t; y: fixed_t; line: Pseg_t): boolean;
+begin
+  if largemap then
+    result := R_PointOnSegSide64(x, y, line)
+  else
+    result := R_PointOnSegSide32(x, y, line);
 end;
 
 //
@@ -730,6 +827,8 @@ begin              {
   fixedcosine := Pfixed_tArray(@fixedsine[FIXEDANGLES div 4]);
 end;
 
+var
+  oldfocallength: fixed_t = -1;
 //
 // R_InitTextureMapping
 //
@@ -753,6 +852,10 @@ begin
   else
     fov := round(arctan(monitor_relative_aspect) * FINEANGLES / D_PI);
   focallength := FixedDiv(centerxfrac, finetangent[FINEANGLES div 4 + fov div 2]);
+  
+  if focallength = oldfocallength then
+    exit;
+  oldfocallength := focallength;
 
   for i := 0 to FINEANGLES div 2 - 1 do
   begin
@@ -1580,7 +1683,7 @@ begin
 
   for i := 0 to viewwidth - 1 do
   begin
-    cosadj := abs(finecosine[xtoviewangle[i] div ANGLETOFINEUNIT]);
+    cosadj := abs(fixedcosine[xtoviewangle[i] div FRACUNIT]);
     distscale[i] := FixedDiv(FRACUNIT, cosadj);
   end;
 {$ENDIF}
@@ -1910,6 +2013,7 @@ var
   vangle: angle_t;
 begin
   viewplayer := player;
+
   viewx := player.mo.x;
   viewy := player.mo.y;
   shiftangle := player.lookdir2;
@@ -2256,7 +2360,7 @@ begin
   R_SetDrawSegFunctions;  // version 205
   if usemultithread then
   begin
-    if (videomode = vm8bit) then
+    if videomode = vm8bit then
       R_DoRenderPlayerView8_MultiThread(player)
     else
       R_DoRenderPlayerView32_MultiThread(player);
@@ -2268,6 +2372,8 @@ begin
   if zbufferactive then
     R_StopZBuffer;
 {$ENDIF}
+  if mn_makescreenshot then
+    MN_ScreenShotFromBlitBuffer;
 end;
 
 procedure R_Ticker;

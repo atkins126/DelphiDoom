@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Heretic source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -111,11 +111,13 @@ type
     end;
 
   intercept_t = record
-    frac : fixed_t; // along trace line
-    isaline : boolean;
+    frac: fixed_t; // along trace line
+    isaline: boolean;
     d: thingORline_t;
   end;
   Pintercept_t = ^intercept_t;
+  intercept_tArray = array[0..$FFFF] of intercept_t;
+  Pintercept_tArray = ^intercept_tArray;
 
 const
   MAXINTERCEPTS = 128;
@@ -149,6 +151,10 @@ const
 
 function MapBlockInt(const x: integer): integer;
 
+function MapBlockIntX(const x: int64): integer;
+
+function MapBlockIntY(const y: int64): integer;
+
 function MapToFrac(const x: integer): integer;
 
 function HITDICE(a: integer): integer;
@@ -156,11 +162,26 @@ function HITDICE(a: integer): integer;
 implementation
 
 uses
-  m_rnd;
+  m_rnd,
+  p_setup;
 
 function MapBlockInt(const x: integer): integer; assembler;
 asm
   sar eax, MAPBLOCKSHIFT
+end;
+
+function MapBlockIntX(const x: int64): integer;
+begin
+  result := x shr MAPBLOCKSHIFT;
+  if result <= blockmapxneg then
+    result := result and $1FF;
+end;
+
+function MapBlockIntY(const y: int64): integer;
+begin
+  result := y shr MAPBLOCKSHIFT;
+  if result <= blockmapyneg then
+    result := result and $1FF;
 end;
 
 function MapToFrac(const x: integer): integer; assembler;

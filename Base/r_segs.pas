@@ -253,7 +253,7 @@ begin
     begin
       frontsector.cachedheight := height;
       frontsector.scaleindex := 0;
-      height := height shr  7;
+      height := height shr 7;
       // calculate adjustment
       while true do
       begin
@@ -726,6 +726,9 @@ begin
       markfloor := (worldlow <> worldbottom) or
                    (backsector.floorpic <> frontsector.floorpic) or
                    (backsector.lightlevel <> frontsector.lightlevel) or
+                   (backsector.floorangle <> frontsector.floorangle) or
+                   (backsector.flooranglex <> frontsector.flooranglex) or
+                   (backsector.floorangley <> frontsector.floorangley) or
                    {$IFDEF DOOM_OR_STRIFE}
                    // killough 3/7/98: Add checks for (x,y) offsets
                    (backsector.floor_xoffs <> frontsector.floor_xoffs) or
@@ -745,6 +748,9 @@ begin
       markceiling := (worldhigh <> worldtop) or
                      (backsector.ceilingpic <> frontsector.ceilingpic) or
                      (backsector.lightlevel <> frontsector.lightlevel) or
+                     (backsector.ceilingangle <> frontsector.ceilingangle) or
+                     (backsector.ceilinganglex <> frontsector.ceilinganglex) or
+                     (backsector.ceilingangley <> frontsector.ceilingangley) or
                      {$IFDEF DOOM_OR_STRIFE}
                      // killough 3/7/98: Add checks for (x,y) offsets
                      (backsector.ceiling_xoffs <> frontsector.ceiling_xoffs) or
@@ -1141,6 +1147,13 @@ begin
   pds.x2 := stop;
   rw_stopx := stop + 1;
 
+  // JVAL: 20200417 - Use double arithmetic for large segs 
+  if curline.map_length >= 1024 then
+  begin
+    R_StoreWallRange_DBL(pds, start, stop);
+    exit;
+  end;
+
   // calculate scale at both ends and step
   rw_scale := R_ScaleFromGlobalAngle(viewangle + xtoviewangle[start], overflow);
   if overflow or (precisescalefromglobalangle and (pds.midsec <> nil) and (rw_scale > 64 * FRACUNIT)) then
@@ -1293,6 +1306,9 @@ begin
       markfloor := (worldlow <> worldbottom) or
                    (backsector.floorpic <> frontsector.floorpic) or
                    (backsector.lightlevel <> frontsector.lightlevel) or
+                   (backsector.floorangle <> frontsector.floorangle) or
+                   (backsector.flooranglex <> frontsector.flooranglex) or
+                   (backsector.floorangley <> frontsector.floorangley) or
                    {$IFDEF DOOM_OR_STRIFE}
                    // killough 3/7/98: Add checks for (x,y) offsets
                    (backsector.floor_xoffs <> frontsector.floor_xoffs) or
@@ -1312,6 +1328,9 @@ begin
       markceiling := (worldhigh <> worldtop) or
                      (backsector.ceilingpic <> frontsector.ceilingpic) or
                      (backsector.lightlevel <> frontsector.lightlevel) or
+                     (backsector.ceilingangle <> frontsector.ceilingangle) or
+                     (backsector.ceilinganglex <> frontsector.ceilinganglex) or
+                     (backsector.ceilingangley <> frontsector.ceilingangley) or
                      {$IFDEF DOOM_OR_STRIFE}
                      // killough 3/7/98: Add checks for (x,y) offsets
                      (backsector.ceiling_xoffs <> frontsector.ceiling_xoffs) or

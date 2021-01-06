@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -192,7 +192,12 @@ type
     gravity: fixed_t;
     // JVAL: Lines 272, 272 (MBF) - Change sky (VERSION 205)
     sky: integer;
-    // [kb] For R_WiggleFix
+    floorangle: angle_t; // JVAL: 20200221 - Texture angle
+    flooranglex: fixed_t; // JVAL: 20201229 - Texture angle rover
+    floorangley: fixed_t; // JVAL: 20201229 - Texture angle rover
+    ceilingangle: angle_t; // JVAL: 20200221 - Texture angle
+    ceilinganglex: fixed_t; // JVAL: 20201229 - Texture angle rover
+    ceilingangley: fixed_t; // JVAL: 20201229 - Texture angle rover
 {$IFDEF OPENGL}
     floorlightlevel: smallint;
     ceilinglightlevel: smallint;
@@ -207,8 +212,12 @@ type
     no_toptextures: boolean;
     no_bottomtextures: boolean;
 {$ELSE}
+    // [kb] For R_WiggleFix
     cachedheight: integer;
     scaleindex: integer;
+    // JVAL: 20201225 - Speed up maps with large number of slopes
+    floorvisslope: integer;
+    ceilingvisslope: integer;
 {$ENDIF}
   end;
   sector_tArray = packed array[0..$FFFF] of sector_t;
@@ -269,7 +278,7 @@ type
     dy: fixed_t;
 
     // Animation related.
-    flags: smallint;
+    flags: word; //smallint;
     special: smallint;
     tag: smallint;
 
@@ -307,7 +316,7 @@ const
   // Line rendering flags
   LRF_ISOLATED = 1;
   LRF_TRANSPARENT = 2;
-  LRF_SLOPED = 4;   // JVAL: Slopes
+  LRF_SLOPED = 4; // JVAL: Slopes
 
 const
   // Sector rendering flags
@@ -320,6 +329,12 @@ const
   SRF_SLOPEFLOOR = 32; // JVAL: Slopes
   SRF_SLOPECEILING = 64; // JVAL: Slopes
   SRF_SLOPED = SRF_SLOPEFLOOR + SRF_SLOPECEILING; // JVAL: Slopes
+  SRF_ROTATE_FLOOR = 128; // JVAL: 20201229 - Texture angle - UNUSED
+  SRF_ROTATE_CEILING = 256; // JVAL: 20201229 - Texture angle - UNUSED
+  SRF_ROTATE = SRF_ROTATE_FLOOR or SRF_ROTATE_CEILING;  // JVAL: 20201229 - Texture angle - UNUSED
+  SRF_INTERPOLATE_ROTATE = 512; 
+  SRF_INTERPOLATE_FLOORSLOPE = 1024;
+  SRF_INTERPOLATE_CEILINGSLOPE = 2048;
 
 const
   // Vissprite render flags
@@ -372,6 +387,7 @@ type
     length: single;
     iSegID: integer;
 {$ELSE}
+    map_length: integer;
     inv_length: double;      
 {$ENDIF}
     miniseg: boolean;
@@ -657,6 +673,7 @@ type
     terraintype: integer; // JVAL: 9 December 2007, Added terrain types
     translation: integer;
     lump: integer;
+    size: integer;
   end;
   Pflat_t = ^flat_t;
   flatPArray = array[0..$FFFF] of Pflat_t;

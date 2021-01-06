@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Heretic source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -354,7 +354,13 @@ uses
   deh_base in 'Base\deh_base.pas',
   r_sprite in 'Base\r_sprite.pas',
   r_tallcolumn in 'Base\r_tallcolumn.pas',
-  p_animdefs in 'Base\p_animdefs.pas';
+  p_animdefs in 'Base\p_animdefs.pas',
+  p_easyslope in 'Base\p_easyslope.pas',
+  r_flat32_ripple in 'Base\r_flat32_ripple.pas',
+  r_flatinfo in 'Base\r_flatinfo.pas',
+  r_span32_ripple in 'Base\r_span32_ripple.pas',
+  p_easyangle in 'Base\p_easyangle.pas',
+  mn_screenshot in 'Base\mn_screenshot.pas';
 
 var
   Saved8087CW: Word;

@@ -99,6 +99,12 @@ var
   blockmap: PIntegerArray; // int for larger maps
 // offsets in blockmap are from here
   blockmaplump: PIntegerArray;
+
+  blockmapxneg: integer;
+  blockmapyneg: integer;
+
+  internalblockmapformat: boolean;
+
 // for thing chains
 type
   blocklinkitem_t = record
@@ -143,6 +149,9 @@ var
 var
   hidedoublicatedbarrels: boolean = true;
 
+var
+  largemap: boolean;
+
 implementation
 
 uses
@@ -171,6 +180,8 @@ uses
   p_udmf,
   p_3dfloors, // JVAL: 3d Floors
   p_slopes,   // JVAL: Slopes
+  p_easyslope,
+  p_easyangle, // JVAL: 20201229 - Easy floor and ceiling texture angle
   p_affectees,
   p_musinfo,
   p_animdefs,
@@ -209,6 +220,11 @@ var
   i: integer;
   ml: Pmapvertex_t;
   li: Pvertex_t;
+  minx: integer;
+  maxx: integer;
+  miny: integer;
+  maxy: integer;
+  dx, dy: integer;
 begin
   // Determine number of lumps:
   //  total lump length / vertex record length.
@@ -225,14 +241,33 @@ begin
   // Copy and convert vertex coordinates,
   // internal representation as fixed.
   li := @vertexes[0];
+
+  // JVAL: 20200414 -> Find map boundaries
+  minx := 100000;
+  maxx := -100000;
+  miny := 100000;
+  maxy := -100000;
   for i := 0 to numvertexes - 1 do
   begin
+    if ml.x > maxx then
+      maxx := ml.x;
+    if ml.x < minx then
+      minx := ml.x;
+    if ml.y > maxy then
+      maxy := ml.y;
+    if ml.y < miny then
+      miny := ml.y;
     li.x := ml.x * FRACUNIT;
     li.y := ml.y * FRACUNIT;
     li.amvalidcount := 0;
     inc(ml);
     inc(li);
   end;
+
+  dx := maxx - minx;
+  dy := maxy - miny;
+
+  largemap := (dx < -32767) or (dx > 32767) or (dy < -32767) or (dy > 32767);
 
   // Free buffer memory.
   Z_Free(data);
@@ -249,6 +284,11 @@ var
   ml: Pmapvertex_t;
   li: Pvertex_t;
   numglverts: integer;
+  minx: integer;
+  maxx: integer;
+  miny: integer;
+  maxy: integer;
+  dx, dy: integer;
 begin
   // Determine number of lumps:
   //  total lump length / vertex record length.
@@ -270,17 +310,36 @@ begin
 
   ml := Pmapvertex_t(data);
 
+  // JVAL: 20201228 -> Find map boundaries
+  minx := 100000;
+  maxx := -100000;
+  miny := 100000;
+  maxy := -100000;
+
   // Copy and convert vertex coordinates,
   // internal representation as fixed.
   li := @vertexes[0];
   for i := 0 to firstglvert - 1 do
   begin
+    if ml.x > maxx then
+      maxx := ml.x;
+    if ml.x < minx then
+      minx := ml.x;
+    if ml.y > maxy then
+      maxy := ml.y;
+    if ml.y < miny then
+      miny := ml.y;
     li.x := ml.x * FRACUNIT;
     li.y := ml.y * FRACUNIT;
     li.amvalidcount := 0;
     inc(ml);
     inc(li);
   end;
+
+  dx := maxx - minx;
+  dy := maxy - miny;
+
+  largemap := (dx < -32767) or (dx > 32767) or (dy < -32767) or (dy > 32767);
 
   // Free buffer memory.
   Z_Free(data);
@@ -649,6 +708,12 @@ begin
     ss.renderflags := 0;
     ss.flags := 0;
     ss.gravity := GRAVITY;  // JVAL: sector gravity (VERSION 204)
+    ss.floorangle := 0;     // JVAL: 20200221 - Texture angle
+    ss.flooranglex := 0;    // JVAL: 20201229 - Texture angle rover
+    ss.floorangley := 0;    // JVAL: 20201229 - Texture angle rover
+    ss.ceilingangle := 0;   // JVAL: 20200221 - Texture angle
+    ss.ceilinganglex := 0;  // JVAL: 20201229 - Texture angle rover
+    ss.ceilingangley := 0;  // JVAL: 20201229 - Texture angle rover
 {$IFDEF OPENGL}
     ss.floorlightlevel := ss.lightlevel;
     ss.ceilinglightlevel := ss.lightlevel;
@@ -656,6 +721,9 @@ begin
     // [kb] For R_WiggleFix
     ss.cachedheight := 0;
     ss.scaleindex := 0;
+    // JVAL: 20201225 - Speed up maps with large number of slopes
+    ss.floorvisslope := -1;
+    ss.ceilingvisslope := -1;
 {$ENDIF}
     // killough 4/11/98 sector used to get ceiling lighting:
     ss.ceilinglightsec := -1;
@@ -759,6 +827,11 @@ begin
     result := false;
     exit;
   end;
+  if P_IsEasySlopeItem(doomdnum) then
+  begin
+    result := false;
+    exit;
+  end;
   // Do not spawn cool, new monsters if !commercial
   if gamemode <> commercial then
   begin
@@ -779,6 +852,7 @@ begin
         end;
     end;
   end;
+
   result := true;
 end;
 
@@ -841,6 +915,19 @@ var
 begin
   data := W_CacheLumpNum(lump, PU_STATIC);
   numthings := W_LumpLength(lump) div SizeOf(mapthing_t);
+
+  P_EasySlopeInit;
+
+  mt := Pmapthing_t(data);
+  for i := 0 to numthings - 1 do
+  begin
+    if P_IsEasySlopeItem(mt._type) then // Do spawn easy slope items
+      P_SpawnEasySlopeThing(mt);
+
+    inc(mt);
+  end;
+
+  P_EasySlopeExecute;
 
   mt := Pmapthing_t(data);
   for i := 0 to numthings - 1 do
@@ -1371,6 +1458,20 @@ begin
     end;
   end;
 
+  // MAES: set blockmapxneg and blockmapyneg
+  // E.g. for a full 512x512 map, they should be both
+  // -1. For a 257*257, they should be both -255 etc.
+  if bmapwidth > 255 then
+    blockmapxneg := bmapwidth - 512
+  else
+    blockmapxneg := -257;
+  if bmapheight > 255 then
+    blockmapyneg := bmapheight - 512
+  else
+    blockmapyneg := -257;
+
+  internalblockmapformat := true;
+
   // free all temporary storage
 
   memfree(pointer(blocklists), NBlocks * SizeOf(Plinelist_t));
@@ -1387,8 +1488,11 @@ var
   t: smallint;
   wadblockmaplump: PSmallIntArray;
 begin
+  blockmapxneg := -257;
+  blockmapyneg := -257;
+  internalblockmapformat := false;
   count := W_LumpLength(lump) div 2; // Number of smallint values
-  if (M_CheckParm('-blockmap') > 0) or (count < 4) or (count >= $10000) then
+  if (M_CheckParm('-blockmap') > 0) or (count < 4) or (count >= $10000) or largemap then
   begin
     P_CreateBlockMap
   end
@@ -1529,26 +1633,46 @@ begin
       I_Error('P_GroupLines(): miscounted');
 
     // set the degenmobj_t to the middle of the bounding box
-    sector.soundorg.x := (bbox[BOXRIGHT] + bbox[BOXLEFT]) div 2;
-    sector.soundorg.y := (bbox[BOXTOP] + bbox[BOXBOTTOM]) div 2;
+    if largemap then
+    begin
+      sector.soundorg.x := bbox[BOXRIGHT] div 2 + bbox[BOXLEFT] div 2;
+      sector.soundorg.y := bbox[BOXTOP] div 2 + bbox[BOXBOTTOM] div 2;
+    end
+    else
+    begin
+      sector.soundorg.x := (bbox[BOXRIGHT] + bbox[BOXLEFT]) div 2;
+      sector.soundorg.y := (bbox[BOXTOP] + bbox[BOXBOTTOM]) div 2;
+    end;
 
     // adjust bounding box to map blocks
-    block := MapBlockInt(bbox[BOXTOP] - bmaporgy + MAXRADIUS);
+    if internalblockmapformat then
+      block := MapBlockIntY(int64(bbox[BOXTOP]) - int64(bmaporgy) + MAXRADIUS)
+    else
+      block := MapBlockInt(bbox[BOXTOP] - bmaporgy + MAXRADIUS);
     if block >= bmapheight then
       block  := bmapheight - 1;
     sector.blockbox[BOXTOP] := block;
 
-    block := MapBlockInt(bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
+    if internalblockmapformat then
+      block := MapBlockIntY(int64(bbox[BOXBOTTOM]) - int64(bmaporgy) - MAXRADIUS)
+    else
+      block := MapBlockInt(bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
     if block < 0 then
       block  := 0;
     sector.blockbox[BOXBOTTOM] := block;
 
-    block := MapBlockInt(bbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
+    if internalblockmapformat then
+      block := MapBlockIntX(int64(bbox[BOXRIGHT]) - int64(bmaporgx) + MAXRADIUS)
+    else
+      block := MapBlockInt(bbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
     if block >= bmapwidth then
       block := bmapwidth - 1;
     sector.blockbox[BOXRIGHT] := block;
 
-    block := MapBlockInt(bbox[BOXLEFT] - bmaporgx - MAXRADIUS);
+    if internalblockmapformat then
+      block := MapBlockIntX(int64(bbox[BOXLEFT]) - int64(bmaporgx) - MAXRADIUS)
+    else
+      block := MapBlockInt(bbox[BOXLEFT] - bmaporgx - MAXRADIUS);
     if block < 0 then
       block := 0;
     sector.blockbox[BOXLEFT] := block;
@@ -1719,6 +1843,7 @@ begin
 
   wminfo.maxfrags := 0;
   wminfo.partime := 180;
+
   for i := 0 to MAXPLAYERS - 1 do
   begin
     players[i].killcount := 0;
@@ -1883,6 +2008,9 @@ begin
   if devparm then
     printf('P_LoadThings()'#13#10);
   P_LoadThings(lumpnum + Ord(ML_THINGS));
+
+  // JVAL: 20201229 - Easy floor and ceiling texture angle
+  P_AdjustEasyAngle;
 
   // if deathmatch, randomly spawn the active players
   if deathmatch <> 0 then

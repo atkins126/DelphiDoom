@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Hexen source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -448,6 +448,7 @@ begin
 
   gld_AddWall(line, false, nil); // JVAL OPENGL
 {$ELSE}
+
   // Global angle needed by segcalc.
   rw_angle1 := angle1;
   angle1 := angle1 - viewangle;
@@ -547,6 +548,12 @@ begin
      (backsector.floorpic = frontsector.floorpic) and
      (backsector.lightlevel = frontsector.lightlevel) and
      (backsector.special = frontsector.special) and
+     (backsector.floorangle = frontsector.floorangle) and
+     (backsector.flooranglex = frontsector.flooranglex) and
+     (backsector.floorangley = frontsector.floorangley) and
+     (backsector.ceilingangle = frontsector.ceilingangle) and
+     (backsector.ceilinganglex = frontsector.ceilinganglex) and
+     (backsector.ceilingangley = frontsector.ceilingangley) and
      (curline.sidedef.midtexture = 0) and
      (backsector.midsec = frontsector.midsec) then // JVAL: 3d Floors
 
@@ -743,7 +750,6 @@ var
   tmpline: Pline_t;
 {$ENDIF}
 begin
-  inc(sscount);
   sub := @subsectors[num];
 
   frontsector := sub.sector;
@@ -766,6 +772,9 @@ begin
                                 frontsector.special,
                                 frontsector.renderflags and not (SRF_RIPPLE_CEILING or SRF_SLOPECEILING),
                                 true,
+                                frontsector.floorangle, // JVAL: 20200221 - Texture angle
+                                frontsector.flooranglex,// JVAL: 20201229 - Texture angle rover
+                                frontsector.floorangley,// JVAL: 20201229 - Texture angle rover
                                 {$IFNDEF OPENGL}
                                 floorslope,
                                 {$ENDIF}
@@ -777,6 +786,9 @@ begin
                                 frontsector.special,
                                 frontsector.renderflags and not (SRF_RIPPLE_CEILING or SRF_SLOPECEILING),
                                 true,
+                                frontsector.floorangle, // JVAL: 20200221 - Texture angle
+                                frontsector.flooranglex,// JVAL: 20201229 - Texture angle rover
+                                frontsector.floorangley,// JVAL: 20201229 - Texture angle rover
                                 {$IFNDEF OPENGL}
                                 nil,
                                 {$ENDIF}
@@ -795,6 +807,9 @@ begin
                                   0,
                                   frontsector.renderflags and not (SRF_RIPPLE_FLOOR or SRF_SLOPEFLOOR),
                                   false,
+                                  frontsector.ceilingangle, // JVAL: 20200221 - Texture angle
+                                  frontsector.ceilinganglex,// JVAL: 20201229 - Texture angle rover
+                                  frontsector.ceilingangley,// JVAL: 20201229 - Texture angle rover
                                   {$IFNDEF OPENGL}
                                   ceilingslope,
                                   {$ENDIF}
@@ -806,6 +821,9 @@ begin
                                   0,
                                   frontsector.renderflags and not (SRF_RIPPLE_FLOOR or SRF_SLOPEFLOOR),
                                   false,
+                                  frontsector.ceilingangle, // JVAL: 20200221 - Texture angle
+                                  frontsector.ceilinganglex,// JVAL: 20201229 - Texture angle rover
+                                  frontsector.ceilingangley,// JVAL: 20201229 - Texture angle rover
                                   {$IFNDEF OPENGL}
                                   nil,
                                   {$ENDIF}
@@ -815,7 +833,8 @@ begin
     ceilingplane := nil;
 
 {$IFDEF OPENGL}
-  if (frontsector = sub.sector) and (frontsector.renderflags = 0) then
+  if (frontsector = sub.sector) and (frontsector.renderflags = 0) and
+     (frontsector.floorangle = 0) and (frontsector.ceilingangle = 0) then
   begin
     // if the sector has bottomtextures, then the floorheight will be set to the
     // highest surounding floorheight

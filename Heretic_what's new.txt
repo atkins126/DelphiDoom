@@ -1,3 +1,36 @@
+Fixed memory corruption problem in I_ReverseScreen().
+Corrected lump name character case for runtime loading.
+Fixes to tall texture patches.
+Removed limit on intecepts.
+Changed traverse order of mobjinfo table.
+When an invalid blockmap is detected will build a new one.
+Added -blockmap command line parameter. When set it will force to generate blockmap while loading a map.
+Easyslope item to easily create slopes.
+Support for flats up to 4096x4096 px.
+FLATINFO lump with information regarding flat definitions.
+Fixed bug in erronous width & height screen dimentions input when the -geom command line parameter is specified.
+Fixed bug that did't recornized the '-keyboardmode 2' command line parameter for ESDF movement.
+Speed improvements in maps with high number of slopes.
+Optimizations to slope rendering in sofware mode.
+Corrections to Doom patch detection algorithm.
+Now can theoretically handle maps up to 65536x65536 px.
+Fixed serious bug while deallocating thinkers.
+Fixed problem with dehacked file loading (-deh parameter).
+Key bindings can now accept SHIFT & CTRL.
+Floor and ceiling texture rotation.
+Displays a warning if no player start found.
+Screenshot in Save/Load menu.
+PascalScript can access keyboard, mouse keys and joystick keys. The feature is intentionally dormant in demo recording/playback and in netgame.
+Added Overlay.DrawRect & OverlayDrawRect PascalScript functions. params -> (const ticks: Integer; const red, green, blue: byte; const x1, y1, x2, y2: Integer)
+Added overlaydrawrect console command. Usage is overlaydrawrect [ticks] [x1] [y1] [x2] [y2] [red] [green] [blue].
+Dynamic slopes controled by PascalScript. (SetFloorSlope & SetCeilingSlope functions)
+Added A_CheckFloor & A_CheckCeiling ACTORDEF functions.
+Added A_StopSound ACTORDEF function.
+Added A_JumpIfTargetOutsideMeleeRange & A_JumpIfTargetInsideMeleeRange ACTORDEF functions.
+Added A_JumpIfTracerCloser ACTORDEF function.
+Save target & tracer in saved games.
+Mass, args and special fields for mobjs.
+
 Version 2.0.5 build 727 - (4/12/2020)
 -----------------------
 Corrections to ACTORDEF export procedure.

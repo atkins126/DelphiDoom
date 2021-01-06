@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Hexen source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -32,6 +32,7 @@ unit g_game;
 interface
 
 uses
+  d_delphi,
   doomdef,
   m_fixed,
   d_event,
@@ -247,18 +248,19 @@ var
   starttime: integer;        // for comparative timing purposes
 
 const
-  NUMKEYS = 256;
+  SAVEGAMESIZE = $80000; // Originally $2C000
 
 const
-  SAVEGAMESIZE = $80000; // Originally $2C000
-  
+  NUMKEYS = 256;
+
 var
   gamekeydown: array[0..NUMKEYS - 1] of boolean;
+  mousebuttons: PBooleanArray;
+  joybuttons: PBooleanArray;
 
 implementation
 
 uses
-  d_delphi,
   c_cmds,
   z_zone,
   doomstat,
@@ -308,8 +310,6 @@ uses
   sv_save,
   tables;
 
-const
-  SAVESTRINGSIZE = 24;
 
 //==========================================================================
 //
@@ -399,7 +399,6 @@ var
   lookheld2: integer; // JVAL Look RIGHT and LEFT
 
   mousearray: array[0..2] of boolean;
-  mousebuttons: PBooleanArray;
 
 // mouse values are used once
   mousex: integer = 0;
@@ -416,7 +415,6 @@ var
   joyxmove: integer;
   joyymove: integer;
   joyarray: array[0..NUMJOYBUTTONS - 1] of boolean;
-  joybuttons: PBooleanArray;
 
   savegameslot: integer;
   savedescription: string;
@@ -1303,6 +1301,18 @@ begin
   S_StopAllSequences;
   PS_NewMap;
   P_SetupLevel(gamemap, 0, gameskill);
+
+  // JVAL: Prevent erroneous demos
+  for i := 0 to MAXPLAYERS - 1 do
+    if playeringame[i] then
+      if players[i].mo = nil then
+      begin
+        I_Warning('G_DoLoadLevel(): Null player actor, is player start missing?'#13#10);
+        gamestate := GS_DEMOSCREEN;
+        D_StartTitle;
+        exit;
+      end;
+
   displayplayer := consoleplayer;    // view the guy you are playing
   starttime := I_GetTime;
   gameaction := ga_nothing;

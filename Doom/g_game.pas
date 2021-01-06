@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -31,13 +31,14 @@ unit g_game;
 interface
 
 uses
+  d_delphi,
   doomdef,
   m_fixed,
   d_event,
   d_player,
   d_ticcmd;
 
-// 
+//
 // GAME
 //
 
@@ -258,10 +259,22 @@ var
   dogs, default_dogs: integer;                // killough 7/19/98: Marine's best friend :)
   dog_jumping, default_dog_jumping: integer;  // killough 10/98
 
+const
+  SAVEGAMESIZE = $1000000; // Originally $2C000
+  SAVESTRINGSIZE = 24;
+  SAVEVERSIONSIZE = 16;
+
+const
+  NUMKEYS = 256;
+
+var
+  gamekeydown: array[0..NUMKEYS - 1] of boolean;
+  mousebuttons: PBooleanArray;
+  joybuttons: PBooleanArray;
+
 implementation
 
 uses
-  d_delphi,
   c_cmds,
   z_zone,
   doomstat,
@@ -311,10 +324,6 @@ uses
   r_intrpl,
   tables;
 
-const
-  SAVEGAMESIZE = $1000000; // Originally $2C000
-  SAVESTRINGSIZE = 24;
-
 procedure G_ReadDemoTiccmd(cmd: Pticcmd_t); forward;
 procedure G_WriteDemoTiccmd(cmd: Pticcmd_t); forward;
 
@@ -362,17 +371,14 @@ end;
 
 const
   SLOWTURNTICS = 6;
-  NUMKEYS = 256;
 
 var
-  gamekeydown: array[0..NUMKEYS - 1] of boolean;
   turnheld: integer;
 
   lookheld: integer;  // JVAL Look UP and DOWN
   lookheld2: integer; // JVAL Look RIGHT and LEFT
 
   mousearray: array[0..2] of boolean;
-  mousebuttons: PBooleanArray;
 
 // mouse values are used once
   mousex: integer = 0;
@@ -389,7 +395,6 @@ var
   joyxmove: integer;
   joyymove: integer;
   joyarray: array[0..NUMJOYBUTTONS - 1] of boolean;
-  joybuttons: PBooleanArray;
 
   savegameslot: integer;
   savedescription: string;
@@ -1108,6 +1113,7 @@ begin
     if playeringame[i] then
       if players[i].mo = nil then
       begin
+        I_Warning('G_DoLoadLevel(): Null player actor, is player start missing?'#13#10);
         gamestate := GS_DEMOSCREEN;
         D_StartTitle;
         exit;
@@ -1220,11 +1226,14 @@ begin
           result := true;
           exit;
         end;
+
         if ev.data1 < NUMKEYS then
           gamekeydown[ev.data1] := true;
+
         result := true; // eat key down events
         exit;
       end;
+
     ev_keyup:
       begin
         if ev.data1 < NUMKEYS then
@@ -1232,6 +1241,7 @@ begin
         result := false; // always let key up events filter down
         exit;
       end;
+
     ev_mouse:
       begin
         if usemouse then
@@ -1253,6 +1263,7 @@ begin
         result := true;    // eat events
         exit;
       end;
+
     ev_joystick:
       begin
         if usejoystick then
@@ -1931,9 +1942,6 @@ begin
   gameaction := ga_loadgame;
 end;
 
-const
-  VERSIONSIZE = 16;
-
 procedure G_DoLoadGame;
 var
   len: integer;
@@ -1999,6 +2007,10 @@ begin
         savegameversion := VERSION203
       else if vsaved = 'version 204' then
         savegameversion := VERSION204
+      else if vsaved = 'version 204' then
+        savegameversion := VERSION204
+      else if vsaved = 'version 205' then
+        savegameversion := VERSION205
       else
       begin
         I_Warning('G_DoLoadGame(): Saved game is from an unsupported version: %s!'#13#10, [vsaved]);
@@ -2008,7 +2020,9 @@ begin
       break;
     end;
 
-  save_p := PByteArray(integer(save_p) + VERSIONSIZE);
+  save_p := PByteArray(integer(save_p) + SAVEVERSIONSIZE);
+
+  P_UnArchiveScreenShot;
 
   gameskill := skill_t(save_p[0]);
   save_p := PByteArray(integer(save_p) + 1);
@@ -2106,11 +2120,12 @@ begin
 
   savegameversion := VERSION;
   sprintf(name2, 'version %d', [VERSION]);
-  while length(name2) < VERSIONSIZE do
+  while length(name2) < SAVEVERSIONSIZE do
     name2 := name2 + ' ';
 
-  memcpy(save_p, @name2[1], VERSIONSIZE);
-  save_p := PByteArray(integer(save_p) + VERSIONSIZE);
+  memcpy(save_p, @name2[1], SAVEVERSIONSIZE);
+  save_p := PByteArray(integer(save_p) + SAVEVERSIONSIZE);
+  P_ArchiveScreenShot;
 
   save_p[0] := Ord(gameskill);
   save_p := PByteArray(integer(save_p) + 1);

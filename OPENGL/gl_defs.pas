@@ -57,6 +57,7 @@ type
     leftoffset, topoffset: integer;
     tex_width, tex_height: integer;
     realtexwidth, realtexheight: integer;
+    texturescale: single;
     buffer_width, buffer_height: integer;
     buffer_size: integer;
     heightscale: single;
@@ -73,7 +74,7 @@ const
 
 var
   tran_filter_pct: integer = 66;
-  use_fog: boolean = true; //false;
+  use_fog: boolean = false;
   fog_density: integer = 100; // 200
   gl_nearclip: integer = 5;
   gl_tex_filter_string: string;

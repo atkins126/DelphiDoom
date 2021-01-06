@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Hexen source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -106,7 +106,7 @@ uses
   d_delphi,
   doomdata,
   d_ticcmd,
-  d_event, 
+  d_event,
   d_think,
   info,
   {$IFDEF OPENGL}
@@ -270,6 +270,7 @@ begin
     player.viewz := player.mo.floorz + 4 * FRACUNIT;
 end;
 
+// JVAL: Slopes
 procedure P_SlopesCalcHeight(player: Pplayer_t);
 var
   angle: integer;
@@ -283,7 +284,8 @@ begin
   // Note: a LUT allows for effects
   //  like a ramp with low health.
 
-  if G_PlayingEngineVersion < VERSION142 then
+  if (G_PlayingEngineVersion < VERSION142) or
+     (G_PlayingEngineVersion >= VERSION205) then
   begin
     P_CalcHeight(player);
     exit;
@@ -372,7 +374,7 @@ begin
     if player.viewz < player.mo.floorz + 4 * FRACUNIT then
       player.viewz := player.mo.floorz + 4 * FRACUNIT;
   end
-  else 
+  else
     player.viewz := player.mo.z + player.viewheight + player.viewbob;
 
   if (player.mo.floorclip <> 0) and
@@ -927,7 +929,6 @@ begin
     player.mo.flags := player.mo.flags and not MF_NOCLIP;
 
   cmd := @player.cmd;
-
   if player.mo.flags and MF_JUSTATTACKED <> 0 then
   begin // Gauntlets attack auto forward motion
     cmd.angleturn := 0;
@@ -1120,9 +1121,7 @@ begin
     end;
   end
   else
-  begin
     player.usedown := false;
-  end;
 
   // Morph counter
   if player.morphTics > 0 then
@@ -1497,10 +1496,10 @@ begin
     end
     else
     begin
-      if victim.info.mass <= 1 then
+      if victim.mass <= 1 then
         victim.momz := 1000 * FRACUNIT
       else
-        victim.momz := (1000 div victim.info.mass) * FRACUNIT;
+        victim.momz := (1000 div victim.mass) * FRACUNIT;
     end;
 
     if victim.player = nil then // Players handled automatically
@@ -1706,9 +1705,11 @@ begin
       else
         curpos := 6;
     end;
+
     player.readyArtifact := artitype_t(player.inventory[inv_ptr]._type);
   end;
 end;
+
 
 //----------------------------------------------------------------------------
 //
@@ -2037,3 +2038,4 @@ begin
 end;
 
 end.
+

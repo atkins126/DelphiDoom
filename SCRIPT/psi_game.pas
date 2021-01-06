@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -96,6 +96,7 @@ procedure PS_SetActorHealth(const key: LongWord; const h: Integer);
 function PS_GetActorSpawnHealth(const key: LongWord): Integer;
 
 function PS_GetActorMass(const key: LongWord): Integer;
+procedure PS_SetActorMass(const key: LongWord; const m: Integer);
 
 function PS_GetActorHeight(const key: LongWord): Integer;
 procedure PS_SetActorHeight(const key: LongWord; const h: Integer);
@@ -119,6 +120,24 @@ procedure PS_SetActorPushFactor(const key: LongWord; const value: Integer);
 
 function PS_GetActorGravity(const key: LongWord): Integer;
 procedure PS_SetActorGravity(const key: LongWord; const value: Integer);
+
+function PS_GetActorSpecial(const key: LongWord): Integer;
+procedure PS_SetActorSpecial(const key: LongWord; const value: Integer);
+
+function PS_GetActorArg1(const key: LongWord): Integer;
+procedure PS_SetActorArg1(const key: LongWord; const value: Integer);
+
+function PS_GetActorArg2(const key: LongWord): Integer;
+procedure PS_SetActorArg2(const key: LongWord; const value: Integer);
+
+function PS_GetActorArg3(const key: LongWord): Integer;
+procedure PS_SetActorArg3(const key: LongWord; const value: Integer);
+
+function PS_GetActorArg4(const key: LongWord): Integer;
+procedure PS_SetActorArg4(const key: LongWord; const value: Integer);
+
+function PS_GetActorArg5(const key: LongWord): Integer;
+procedure PS_SetActorArg5(const key: LongWord; const value: Integer);
 
 function PS_GetActorName(const key: LongWord): string;
 
@@ -375,6 +394,24 @@ function PS_GetSectorCeilingYOffset(const sec: Integer): Integer;
 procedure PS_SetSectorCeilingYOffset(const sec: Integer; const offs: Integer);
 {$ENDIF}
 
+function PS_GetSectorFloorAngle(const sec: Integer): LongWord;
+procedure PS_SetSectorFloorAngle(const sec: Integer; const ang: LongWord);
+
+function PS_GetSectorFloorAngleX(const sec: Integer): Integer;
+procedure PS_SetSectorFloorAngleX(const sec: Integer; const angx: Integer);
+
+function PS_GetSectorFloorAngleY(const sec: Integer): Integer;
+procedure PS_SetSectorFloorAngleY(const sec: Integer; const angy: Integer);
+
+function PS_GetSectorCeilingAngle(const sec: Integer): LongWord;
+procedure PS_SetSectorCeilingAngle(const sec: Integer; const ang: LongWord);
+
+function PS_GetSectorCeilingAngleX(const sec: Integer): Integer;
+procedure PS_SetSectorCeilingAngleX(const sec: Integer; const angx: Integer);
+
+function PS_GetSectorCeilingAngleY(const sec: Integer): Integer;
+procedure PS_SetSectorCeilingAngleY(const sec: Integer; const angy: Integer);
+
 function PS_GetSectorRippleFloor(const sec: Integer): Boolean;
 procedure PS_SetSectorRippleFloor(const sec: Integer; const rpl: Boolean);
 
@@ -592,6 +629,129 @@ procedure PS_GlobalEarthQuake(const tics: integer);
 
 function PS_GameSkill: integer;
 
+// ------------------ KEYBOARD CONTROL -----------------------------------------
+function PS_gamekeydown(const kkey: integer): boolean;
+
+function PS_mousebuttons(const mkey: integer): boolean;
+
+function PS_joybuttons(const jkey: integer): boolean;
+
+function PS_key_right: integer;
+
+function PS_key_left: integer;
+
+function PS_key_up: integer;
+
+function PS_key_down: integer;
+
+function PS_key_lookup: integer;
+
+function PS_key_lookdown: integer;
+
+function PS_key_lookcenter: integer;
+
+function PS_key_lookright: integer;
+
+function PS_key_lookleft: integer;
+
+{$IFNDEF STRIFE}
+function PS_key_lookforward: integer;
+{$ENDIF}
+
+function PS_key_strafeleft: integer;
+
+function PS_key_straferight: integer;
+
+function PS_key_fire: integer;
+
+function PS_key_use: integer;
+
+function PS_key_strafe: integer;
+
+function PS_key_speed: integer;
+
+function PS_key_jump: integer;
+
+function PS_key_weapon0: integer;
+
+function PS_key_weapon1: integer;
+
+function PS_key_weapon2: integer;
+
+function PS_key_weapon3: integer;
+
+{$IFNDEF HEXEN}
+function PS_key_weapon4: integer;
+
+function PS_key_weapon5: integer;
+
+function PS_key_weapon6: integer;
+
+function PS_key_weapon7: integer;
+{$ENDIF}
+
+{$IFDEF HERETIC_OR_HEXEN}
+function PS_key_flyup: integer;
+
+function PS_key_flydown: integer;
+
+function PS_key_flycenter: integer;
+
+function PS_key_invleft: integer;
+
+function PS_key_invright: integer;
+
+function PS_key_useartifact: integer;
+{$ENDIF}
+
+{$IFDEF STRIFE}
+function PS_key_invleft: integer;
+
+function PS_key_invright: integer;
+
+function PS_key_weapon8: integer;
+
+function PS_key_weapon9: integer;
+
+function PS_key_usehealth: integer;
+
+function PS_key_invquery: integer;
+
+function PS_key_mission: integer;
+
+function PS_key_invpop: integer;
+
+function PS_key_invkey: integer;
+
+function PS_key_invhome: integer;
+
+function PS_key_invend: integer;
+
+function PS_key_invuse: integer;
+
+function PS_key_invdrop: integer;
+{$ENDIF}
+
+function PS_mousebfire: integer;
+
+function PS_mousebstrafe: integer;
+
+function PS_mousebforward: integer;
+
+function PS_joybfire: integer;
+
+function PS_joybstrafe: integer;
+
+function PS_joybuse: integer;
+
+function PS_joybspeed: integer;
+
+function PS_joybjump: integer;
+
+function PS_joyblleft: integer;
+
+function PS_joyblright: integer;
+
 // ---------------------- REGISTRATION -----------------------------------------
 
 procedure SIRegister_Game(C: TPSPascalCompiler);
@@ -678,6 +838,8 @@ type
   public
     procedure PlaySound(const snd: string);
     procedure MoveZ(const dz: Integer);
+    procedure SetFloorSlope(const x1, y1, z1: Integer; const x2, y2, z2: Integer; const x3, y3, z3: Integer);
+    procedure SetCeilingSlope(const x1, y1, z1: Integer; const x2, y2, z2: Integer; const x3, y3, z3: Integer);
   end;
 
   TRTLSectors = class(TObject)
@@ -703,7 +865,11 @@ uses
   doomdef,
   doomdata,
   d_player,
+  d_event,
   d_think,
+  {$IFDEF HEXEN}
+  g_demo,
+  {$ENDIF}
   g_game,
   info_h,
   info,
@@ -720,6 +886,7 @@ uses
   p_params,
   p_setup,
   p_sight,
+  p_slopes,
   p_tick,
   p_user,
   r_data,
@@ -1139,7 +1306,17 @@ begin
     Result := 0;
     Exit;
   end;
-  Result := mo.info.mass;
+  Result := mo.mass;
+end;
+
+procedure PS_SetActorMass(const key: LongWord; const m: Integer);
+var
+  mo: Pmobj_t;
+begin
+  mo := mobj_from_key(key);
+  if mo = nil then
+    Exit;
+  mo.mass := m;
 end;
 
 function PS_GetActorHeight(const key: LongWord): Integer;
@@ -1457,6 +1634,102 @@ begin
   if mo = nil then
     Exit;
   mo.gravity := value;
+end;
+
+function _GetActorArg(const idx: integer; const key: LongWord): Integer;
+var
+  mo: Pmobj_t;
+begin
+  mo := mobj_from_key(key);
+  if mo = nil then
+  begin
+    Result := 0;
+    Exit;
+  end;
+  Result := mo.args[idx];
+end;
+
+procedure _SetActorArg(const idx: integer; const key: LongWord; const value: Integer);
+var
+  mo: Pmobj_t;
+begin
+  mo := mobj_from_key(key);
+  if mo = nil then
+    Exit;
+  mo.args[idx] := value;
+end;
+
+function PS_GetActorSpecial(const key: LongWord): Integer;
+var
+  mo: Pmobj_t;
+begin
+  mo := mobj_from_key(key);
+  if mo = nil then
+  begin
+    Result := 0;
+    Exit;
+  end;
+  Result := mo.special;
+end;
+
+procedure PS_SetActorSpecial(const key: LongWord; const value: Integer);
+var
+  mo: Pmobj_t;
+begin
+  mo := mobj_from_key(key);
+  if mo = nil then
+    Exit;
+  mo.special := value;
+end;
+
+function PS_GetActorArg1(const key: LongWord): Integer;
+begin
+  Result := _GetActorArg(0, key);
+end;
+
+procedure PS_SetActorArg1(const key: LongWord; const value: Integer);
+begin
+  _SetActorArg(0, key, value);
+end;
+
+function PS_GetActorArg2(const key: LongWord): Integer;
+begin
+  Result := _GetActorArg(1, key);
+end;
+
+procedure PS_SetActorArg2(const key: LongWord; const value: Integer);
+begin
+  _SetActorArg(1, key, value);
+end;
+
+function PS_GetActorArg3(const key: LongWord): Integer;
+begin
+  Result := _GetActorArg(2, key);
+end;
+
+procedure PS_SetActorArg3(const key: LongWord; const value: Integer);
+begin
+  _SetActorArg(2, key, value);
+end;
+
+function PS_GetActorArg4(const key: LongWord): Integer;
+begin
+  Result := _GetActorArg(3, key);
+end;
+
+procedure PS_SetActorArg4(const key: LongWord; const value: Integer);
+begin
+  _SetActorArg(3, key, value);
+end;
+
+function PS_GetActorArg5(const key: LongWord): Integer;
+begin
+  Result := _GetActorArg(4, key);
+end;
+
+procedure PS_SetActorArg5(const key: LongWord; const value: Integer);
+begin
+  _SetActorArg(4, key, value);
 end;
 
 function PS_GetActorName(const key: LongWord): string;
@@ -2573,19 +2846,24 @@ begin
   PS_SetActorHeight(LongWord(Self), T);
 end;
 
+procedure TRTLActorHeight_R(Self: TRTLActor; var T: Integer);
+begin
+  T := PS_GetActorHeight(LongWord(Self));
+end;
+
 procedure TRTLActorSpawnHealth_R(Self: TRTLActor; var T: Integer);
 begin
   T := PS_GetActorSpawnHealth(LongWord(Self));
 end;
 
+procedure TRTLActorMass_W(Self: TRTLActor; const T: Integer);
+begin
+  PS_SetActorMass(LongWord(Self), T);
+end;
+
 procedure TRTLActorMass_R(Self: TRTLActor; var T: Integer);
 begin
   T := PS_GetActorMass(LongWord(Self));
-end;
-
-procedure TRTLActorHeight_R(Self: TRTLActor; var T: Integer);
-begin
-  T := PS_GetActorHeight(LongWord(Self));
 end;
 
 procedure TRTLActorCustomParams_W(Self: TRTLActor; const T: Integer; const t1: string);
@@ -2636,6 +2914,66 @@ end;
 procedure TRTLActorGravity_R(Self: TRTLActor; var T: Integer);
 begin
   T := PS_GetActorGravity(LongWord(Self));
+end;
+
+procedure TRTLActorSpecial_W(Self: TRTLActor; const T: Integer);
+begin
+  PS_SetActorSpecial(LongWord(Self), T);
+end;
+
+procedure TRTLActorSpecial_R(Self: TRTLActor; var T: Integer);
+begin
+  T := PS_GetActorSpecial(LongWord(Self));
+end;
+
+procedure TRTLActorArg1_W(Self: TRTLActor; const T: Integer);
+begin
+  PS_SetActorArg1(LongWord(Self), T);
+end;
+
+procedure TRTLActorArg1_R(Self: TRTLActor; var T: Integer);
+begin
+  T := PS_GetActorArg1(LongWord(Self));
+end;
+
+procedure TRTLActorArg2_W(Self: TRTLActor; const T: Integer);
+begin
+  PS_SetActorArg2(LongWord(Self), T);
+end;
+
+procedure TRTLActorArg2_R(Self: TRTLActor; var T: Integer);
+begin
+  T := PS_GetActorArg2(LongWord(Self));
+end;
+
+procedure TRTLActorArg3_W(Self: TRTLActor; const T: Integer);
+begin
+  PS_SetActorArg3(LongWord(Self), T);
+end;
+
+procedure TRTLActorArg3_R(Self: TRTLActor; var T: Integer);
+begin
+  T := PS_GetActorArg3(LongWord(Self));
+end;
+
+procedure TRTLActorArg4_W(Self: TRTLActor; const T: Integer);
+begin
+  PS_SetActorArg4(LongWord(Self), T);
+end;
+
+procedure TRTLActorArg4_R(Self: TRTLActor; var T: Integer);
+begin
+  T := PS_GetActorArg4(LongWord(Self));
+end;
+
+procedure TRTLActorArg5_W(Self: TRTLActor; const T: Integer);
+begin
+  PS_SetActorArg5(LongWord(Self), T);
+end;
+
+procedure TRTLActorArg5_R(Self: TRTLActor; var T: Integer);
+begin
+  T := PS_GetActorArg5(LongWord(Self));
 end;
 
 procedure TRTLActorFlags_W(Self: TRTLActor; const T: Boolean; const t1: LongWord);
@@ -3789,6 +4127,108 @@ begin
 end;
 {$ENDIF}
 
+function PS_GetSectorFloorAngle(const sec: Integer): LongWord;
+begin
+  if (sec >= 0) and (sec < numsectors) then
+    Result := sectors[sec].floorangle
+  else
+    Result := 0;
+end;
+
+procedure PS_SetSectorFloorAngle(const sec: Integer; const ang: LongWord);
+begin
+  if (sec >= 0) and (sec < numsectors) then
+  begin
+    sectors[sec].floorangle := ang;
+    sectors[sec].renderflags := sectors[sec].renderflags or SRF_INTERPOLATE_ROTATE;
+  end;
+end;
+
+function PS_GetSectorFloorAngleX(const sec: Integer): Integer;
+begin
+  if (sec >= 0) and (sec < numsectors) then
+    Result := sectors[sec].ceilinganglex
+  else
+    Result := 0;
+end;
+
+procedure PS_SetSectorFloorAngleX(const sec: Integer; const angx: Integer);
+begin
+  if (sec >= 0) and (sec < numsectors) then
+  begin
+    sectors[sec].ceilinganglex := angx;
+    sectors[sec].renderflags := sectors[sec].renderflags or SRF_INTERPOLATE_ROTATE;
+  end;
+end;
+
+function PS_GetSectorFloorAngleY(const sec: Integer): Integer;
+begin
+  if (sec >= 0) and (sec < numsectors) then
+    Result := sectors[sec].ceilingangley
+  else
+    Result := 0;
+end;
+
+procedure PS_SetSectorFloorAngleY(const sec: Integer; const angy: Integer);
+begin
+  if (sec >= 0) and (sec < numsectors) then
+  begin
+    sectors[sec].ceilingangley := angy;
+    sectors[sec].renderflags := sectors[sec].renderflags or SRF_INTERPOLATE_ROTATE;
+  end;
+end;
+
+function PS_GetSectorCeilingAngle(const sec: Integer): LongWord;
+begin
+  if (sec >= 0) and (sec < numsectors) then
+    Result := sectors[sec].ceilingangle
+  else
+    Result := 0;
+end;
+
+procedure PS_SetSectorCeilingAngle(const sec: Integer; const ang: LongWord);
+begin
+  if (sec >= 0) and (sec < numsectors) then
+  begin
+    sectors[sec].ceilingangle := ang;
+    sectors[sec].renderflags := sectors[sec].renderflags or SRF_INTERPOLATE_ROTATE;
+  end;
+end;
+
+function PS_GetSectorCeilingAngleX(const sec: Integer): Integer;
+begin
+  if (sec >= 0) and (sec < numsectors) then
+    Result := sectors[sec].ceilinganglex
+  else
+    Result := 0;
+end;
+
+procedure PS_SetSectorCeilingAngleX(const sec: Integer; const angx: Integer);
+begin
+  if (sec >= 0) and (sec < numsectors) then
+  begin
+    sectors[sec].ceilinganglex := angx;
+    sectors[sec].renderflags := sectors[sec].renderflags or SRF_INTERPOLATE_ROTATE;
+  end;
+end;
+
+function PS_GetSectorCeilingAngleY(const sec: Integer): Integer;
+begin
+  if (sec >= 0) and (sec < numsectors) then
+    Result := sectors[sec].ceilingangley
+  else
+    Result := 0;
+end;
+
+procedure PS_SetSectorCeilingAngleY(const sec: Integer; const angy: Integer);
+begin
+  if (sec >= 0) and (sec < numsectors) then
+  begin
+    sectors[sec].ceilingangley := angy;
+    sectors[sec].renderflags := sectors[sec].renderflags or SRF_INTERPOLATE_ROTATE;
+  end;
+end;
+
 function PS_GetSectorRippleFloor(const sec: Integer): Boolean;
 begin
   if (sec >= 0) and (sec < numsectors) then
@@ -3947,6 +4387,16 @@ begin
   PS_SectorMoveZ(Integer(self) - 1, dz);
 end;
 
+procedure TRTLSector.SetFloorSlope(const x1, y1, z1: Integer; const x2, y2, z2: Integer; const x3, y3, z3: Integer);
+begin
+  PS_SetFloorSlope(Integer(self) - 1, x1, y1, z1, x2, y2, z2, x3, y3, z3);
+end;
+
+procedure TRTLSector.SetCeilingSlope(const x1, y1, z1: Integer; const x2, y2, z2: Integer; const x3, y3, z3: Integer);
+begin
+  PS_SetCeilingSlope(Integer(self) - 1, x1, y1, z1, x2, y2, z2, x3, y3, z3);
+end;
+
 // ---------------------- TRTLSectors ------------------------------------------
 
 function TRTLSectors.GetSector(id: Integer): TRTLSector;
@@ -4092,6 +4542,66 @@ end;
 procedure TRTLSectorFloorHeight_R(Self: TRTLSector; var T: fixed_t);
 begin
   T := PS_GetSectorFloorHeight(Integer(Self) - 1);
+end;
+
+procedure TRTLSectorFloorAngle_W(Self: TRTLSector; const T: LongWord);
+begin
+  PS_SetSectorFloorAngle(Integer(Self) - 1, T);
+end;
+
+procedure TRTLSectorFloorAngle_R(Self: TRTLSector; var T: LongWord);
+begin
+  T := PS_GetSectorFloorAngle(Integer(Self) - 1);
+end;
+
+procedure TRTLSectorFloorAngleX_W(Self: TRTLSector; const T: Integer);
+begin
+  PS_SetSectorFloorAngleX(Integer(Self) - 1, T);
+end;
+
+procedure TRTLSectorFloorAngleX_R(Self: TRTLSector; var T: Integer);
+begin
+  T := PS_GetSectorFloorAngleX(Integer(Self) - 1);
+end;
+
+procedure TRTLSectorFloorAngleY_W(Self: TRTLSector; const T: Integer);
+begin
+  PS_SetSectorFloorAngleY(Integer(Self) - 1, T);
+end;
+
+procedure TRTLSectorFloorAngleY_R(Self: TRTLSector; var T: Integer);
+begin
+  T := PS_GetSectorFloorAngleY(Integer(Self) - 1);
+end;
+
+procedure TRTLSectorCeilingAngle_W(Self: TRTLSector; const T: LongWord);
+begin
+  PS_SetSectorCeilingAngle(Integer(Self) - 1, T);
+end;
+
+procedure TRTLSectorCeilingAngle_R(Self: TRTLSector; var T: LongWord);
+begin
+  T := PS_GetSectorCeilingAngle(Integer(Self) - 1);
+end;
+
+procedure TRTLSectorCeilingAngleX_W(Self: TRTLSector; const T: Integer);
+begin
+  PS_SetSectorCeilingAngleX(Integer(Self) - 1, T);
+end;
+
+procedure TRTLSectorCeilingAngleX_R(Self: TRTLSector; var T: Integer);
+begin
+  T := PS_GetSectorCeilingAngleX(Integer(Self) - 1);
+end;
+
+procedure TRTLSectorCeilingAngleY_W(Self: TRTLSector; const T: Integer);
+begin
+  PS_SetSectorCeilingAngleY(Integer(Self) - 1, T);
+end;
+
+procedure TRTLSectorCeilingAngleY_R(Self: TRTLSector; var T: Integer);
+begin
+  T := PS_GetSectorCeilingAngleY(Integer(Self) - 1);
 end;
 
 procedure TRTLSectorRippleFloor_W(Self: TRTLSector; const T: Boolean);
@@ -5344,6 +5854,474 @@ begin
   Result := Ord(gameskill);
 end;
 
+// ------------------ KEYBOARD CONTROL -----------------------------------------
+function PS_gamekeydown(const kkey: integer): boolean;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := False
+  else if IsIntegerInRange(kkey, 0, NUMKEYS - 1) then
+    Result := gamekeydown[kkey]
+  else
+    Result := False;
+end;
+
+function PS_mousebuttons(const mkey: integer): boolean;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := False
+  else if IsIntegerInRange(mkey, 0, 2) then
+    Result := mousebuttons[mkey]
+  else
+    Result := False;
+end;
+
+function PS_joybuttons(const jkey: integer): boolean;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := False
+  else if IsIntegerInRange(jkey, 0, NUMJOYBUTTONS - 1) then
+    Result := joybuttons[jkey]
+  else
+    Result := False;
+end;
+
+function PS_key_right: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_right;
+end;
+
+function PS_key_left: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_left;
+end;
+
+function PS_key_up: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_up;
+end;
+
+function PS_key_down: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_down;
+end;
+
+function PS_key_lookup: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_lookup;
+end;
+
+function PS_key_lookdown: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_lookdown;
+end;
+
+function PS_key_lookcenter: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_lookcenter;
+end;
+
+function PS_key_lookright: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_lookright;
+end;
+
+function PS_key_lookleft: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_lookleft;
+end;
+
+{$IFNDEF STRIFE}
+function PS_key_lookforward: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_lookforward;
+end;
+{$ENDIF}
+
+function PS_key_strafeleft: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_strafeleft;
+end;
+
+function PS_key_straferight: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_straferight;
+end;
+
+function PS_key_fire: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_fire;
+end;
+
+function PS_key_use: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_use;
+end;
+
+function PS_key_strafe: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_strafe;
+end;
+
+function PS_key_speed: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_speed;
+end;
+
+function PS_key_jump: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_jump;
+end;
+
+function PS_key_weapon0: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_weapon0;
+end;
+
+function PS_key_weapon1: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_weapon1;
+end;
+
+function PS_key_weapon2: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_weapon2;
+end;
+
+function PS_key_weapon3: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_weapon3;
+end;
+
+{$IFNDEF HEXEN}
+function PS_key_weapon4: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_weapon4;
+end;
+
+function PS_key_weapon5: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_weapon5;
+end;
+
+function PS_key_weapon6: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_weapon6;
+end;
+
+function PS_key_weapon7: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_weapon7;
+end;
+{$ENDIF}
+
+{$IFDEF HERETIC_OR_HEXEN}
+function PS_key_flyup: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_flyup;
+end;
+
+function PS_key_flydown: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_flydown;
+end;
+
+function PS_key_flycenter: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_flycenter;
+end;
+
+function PS_key_invleft: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invleft;
+end;
+
+function PS_key_invright: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invright;
+end;
+
+function PS_key_useartifact: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_useartifact;
+end;
+{$ENDIF}
+
+{$IFDEF STRIFE}
+function PS_key_invleft: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invleft;
+end;
+
+function PS_key_invright: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invright;
+end;
+
+function PS_key_weapon8: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_weapon8;
+end;
+
+function PS_key_weapon9: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_weapon9;
+end;
+
+function PS_key_usehealth: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_usehealth;
+end;
+
+function PS_key_invquery: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invquery;
+end;
+
+function PS_key_mission: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_mission;
+end;
+
+function PS_key_invpop: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invpop;
+end;
+
+function PS_key_invkey: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invkey;
+end;
+
+function PS_key_invhome: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invhome;
+end;
+
+function PS_key_invend: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invend;
+end;
+
+function PS_key_invuse: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invuse;
+end;
+
+function PS_key_invdrop: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := key_invdrop;
+end;
+{$ENDIF}
+
+function PS_mousebfire: integer;
+begin
+  Result := mousebfire;
+end;
+
+function PS_mousebstrafe: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := mousebstrafe;
+end;
+
+function PS_mousebforward: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := mousebforward;
+end;
+
+function PS_joybfire: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := joybfire;
+end;
+
+function PS_joybstrafe: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := joybstrafe;
+end;
+
+function PS_joybuse: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := joybuse;
+end;
+
+function PS_joybspeed: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := joybspeed;
+end;
+
+function PS_joybjump: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := joybjump;
+end;
+
+function PS_joyblleft: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := joyblleft;
+end;
+
+function PS_joyblright: integer;
+begin
+  if demoplayback or demorecording or netgame then
+    Result := 0
+  else
+    Result := joyblright;
+end;
+
 // ---------------------- REGISTRATION -----------------------------------------
 
 // Compiler Registration
@@ -5390,7 +6368,14 @@ begin
   cactor.RegisterProperty('Sector', '!TSector', iptR);
   cactor.RegisterProperty('Health', 'Integer', iptRW);
   cactor.RegisterProperty('SpawnHealth', 'Integer', iptR);
-  cactor.RegisterProperty('Mass', 'Integer', iptR);
+  cactor.RegisterProperty('Mass', 'Integer', iptRW);
+  cactor.RegisterProperty('Gravity', 'fixed_t', iptRW);
+  cactor.RegisterProperty('Special', 'Integer', iptRW);
+  cactor.RegisterProperty('Arg1', 'Integer', iptRW);
+  cactor.RegisterProperty('Arg2', 'Integer', iptRW);
+  cactor.RegisterProperty('Arg3', 'Integer', iptRW);
+  cactor.RegisterProperty('Arg4', 'Integer', iptRW);
+  cactor.RegisterProperty('Arg5', 'Integer', iptRW);
   cactor.RegisterProperty('Height', 'fixed_t', iptRW);
   cactor.RegisterProperty('CustomDropItem', 'Integer', iptRW);
   cactor.RegisterProperty('CustomParams', 'Integer String', iptRW);
@@ -5497,12 +6482,20 @@ begin
   csector.RegisterProperty('MidSector', '!TSector', iptR);
   csector.RegisterProperty('SlopeSector', '!TSector', iptR);
   csector.RegisterProperty('ID', 'Integer', iptR);
+  csector.RegisterProperty('FloorAngle', 'angle_t', iptRW);
+  csector.RegisterProperty('FloorAngleX', 'fixed_t', iptRW);
+  csector.RegisterProperty('FloorAngleY', 'fixed_t', iptRW);
+  csector.RegisterProperty('CeilingAngle', 'angle_t', iptRW);
+  csector.RegisterProperty('CeilingAngleX', 'fixed_t', iptRW);
+  csector.RegisterProperty('CeilingAngleY', 'fixed_t', iptRW);
   csector.RegisterProperty('RippleFloor', 'boolean', iptRW);
   csector.RegisterProperty('RippleCeiling', 'boolean', iptRW);
   csector.RegisterProperty('Interpolate', 'boolean', iptRW);
   csector.RegisterProperty('Gravity', 'fixed_t', iptRW);
   csector.RegisterMethod('procedure PlaySound(const snd: string);');
   csector.RegisterMethod('procedure MoveZ(const dz: fixed_t);');
+  csector.RegisterMethod('procedure SetFloorSlope(const x1, y1, z1: fixed_t; const x2, y2, z2: fixed_t; const x3, y3, z3: fixed_t);');
+  csector.RegisterMethod('procedure SetCeilingSlope(const x1, y1, z1: fixed_t; const x2, y2, z2: fixed_t; const x3, y3, z3: fixed_t);');
 
   csectors.RegisterProperty('Sector', '!TSector Integer', iptR);
   csectors.SetDefaultPropery('Sector');
@@ -5610,12 +6603,18 @@ begin
   ractor.RegisterPropertyHelper(@TRTLActorSector_R, nil, 'Sector');
   ractor.RegisterPropertyHelper(@TRTLActorHealth_R, @TRTLActorHealth_W, 'Health');
   ractor.RegisterPropertyHelper(@TRTLActorSpawnHealth_R, nil, 'SpawnHealth');
-  ractor.RegisterPropertyHelper(@TRTLActorMass_R, nil, 'Mass');
+  ractor.RegisterPropertyHelper(@TRTLActorMass_R, @TRTLActorMass_W, 'Mass');
   ractor.RegisterPropertyHelper(@TRTLActorHeight_R, @TRTLActorHeight_W, 'Height');
   ractor.RegisterPropertyHelper(@TRTLActorCustomDropItem_R, @TRTLActorCustomDropItem_W, 'CustomDropItem');
   ractor.RegisterPropertyHelper(@TRTLActorPushFactor_R, @TRTLActorPushFactor_W, 'PushFactor');
   ractor.RegisterPropertyHelper(@TRTLActorScale_R, @TRTLActorScale_W, 'Scale');
   ractor.RegisterPropertyHelper(@TRTLActorGravity_R, @TRTLActorGravity_W, 'Gravity');
+  ractor.RegisterPropertyHelper(@TRTLActorSpecial_R, @TRTLActorSpecial_W, 'Special');
+  ractor.RegisterPropertyHelper(@TRTLActorArg1_R, @TRTLActorArg1_W, 'Arg1');
+  ractor.RegisterPropertyHelper(@TRTLActorArg2_R, @TRTLActorArg2_W, 'Arg2');
+  ractor.RegisterPropertyHelper(@TRTLActorArg3_R, @TRTLActorArg3_W, 'Arg3');
+  ractor.RegisterPropertyHelper(@TRTLActorArg4_R, @TRTLActorArg4_W, 'Arg4');
+  ractor.RegisterPropertyHelper(@TRTLActorArg5_R, @TRTLActorArg5_W, 'Arg5');
   ractor.RegisterPropertyHelper(@TRTLActorCustomParams_R, @TRTLActorCustomParams_W, 'CustomParams');
   ractor.RegisterPropertyHelper(@TRTLActorFlags_R, @TRTLActorFlags_W, 'Flag');
   ractor.RegisterPropertyHelper(@TRTLActorName_R, nil, 'Name');
@@ -5715,12 +6714,20 @@ begin
   rsector.RegisterPropertyHelper(@TRTLSectorMidSector_R, nil, 'MidSector');
   rsector.RegisterPropertyHelper(@TRTLSectorSlopeSector_R, nil, 'SlopeSector');
   rsector.RegisterPropertyHelper(@TRTLSectorID_R, nil, 'ID');
+  rsector.RegisterPropertyHelper(@TRTLSectorFloorAngle_R, @TRTLSectorFloorAngle_W, 'FloorAngle');
+  rsector.RegisterPropertyHelper(@TRTLSectorFloorAngleX_R, @TRTLSectorFloorAngleX_W, 'FloorAngleX');
+  rsector.RegisterPropertyHelper(@TRTLSectorFloorAngleY_R, @TRTLSectorFloorAngleY_W, 'FloorAngleY');
+  rsector.RegisterPropertyHelper(@TRTLSectorCeilingAngle_R, @TRTLSectorCeilingAngle_W, 'CeilingAngle');
+  rsector.RegisterPropertyHelper(@TRTLSectorCeilingAngleX_R, @TRTLSectorCeilingAngleX_W, 'CeilingAngleX');
+  rsector.RegisterPropertyHelper(@TRTLSectorCeilingAngleY_R, @TRTLSectorCeilingAngleY_W, 'CeilingAngleY');
   rsector.RegisterPropertyHelper(@TRTLSectorRippleFloor_R, @TRTLSectorRippleFloor_W, 'RippleFloor');
   rsector.RegisterPropertyHelper(@TRTLSectorRippleCeiling_R, @TRTLSectorRippleCeiling_W, 'RippleCeiling');
   rsector.RegisterPropertyHelper(@TRTLSectorInterpolate_R, @TRTLSectorInterpolate_W, 'Interpolate');
   rsector.RegisterPropertyHelper(@TRTLSectorGravity_R, @TRTLSectorGravity_W, 'Gravity');
   rsector.RegisterMethod(@TRTLSector.PlaySound, 'PlaySound');
   rsector.RegisterMethod(@TRTLSector.MoveZ, 'MoveZ');
+  rsector.RegisterMethod(@TRTLSector.SetFloorSlope, 'SetFloorSlope');
+  rsector.RegisterMethod(@TRTLSector.SetCeilingSlope, 'SetCeilingSlope');
 
   rsectors.RegisterPropertyHelper(@TRTLSectorsSector_R, nil, 'Sector');
   rsectors.RegisterPropertyHelper(@TRTLSectorsCount_R, nil, 'Count');

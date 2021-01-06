@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Hexen source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -45,6 +45,10 @@ procedure SV_LoadGame(slot: integer);
 
 function SV_GetRebornSlot: integer;
 
+
+procedure P_ArchiveScreenShot;
+
+procedure P_UnArchiveScreenShot;
 var
   SAVEGAMENAME: string = '%s\hex%d00.hxs';
   SAVEGLOBALSNAME: string = '%s\HEX%d00.HXW';
@@ -70,15 +74,16 @@ uses
   d_think,
   d_player,
   d_main,
-  i_system,
-  i_tmp,
+  g_game,
+  m_fixed,
+  mn_screenshot,
   info_h,
   info,
-  m_fixed,
+  i_system,
+  i_tmp,
   tables,
   m_misc,
   m_argv,
-  g_game,
   a_action,
   p_3dfloors,
   p_local,
@@ -200,6 +205,12 @@ begin
     result[i] := Chr(GET_BYTE);
 end;
 
+function GET_FLOAT: float;
+begin
+  result := Pfloat(saveptr)^;
+  saveptr := pointer(integer(saveptr) + SizeOf(float));
+end;
+
 //==========================================================================
 //
 // Saving to stream helpers
@@ -307,6 +318,17 @@ begin
   end;
 end;
 
+
+//==========================================================================
+//
+// StreamOutFloat
+//
+//==========================================================================
+
+procedure StreamOutFloat(val: float);
+begin
+  SavingFP.Write(val, SizeOf(float));
+end;
 
 const
   MAX_TARGET_PLAYERS = 512;
@@ -443,6 +465,9 @@ end;
 procedure RestoreMobj(mobj: Pmobj_t);
 begin
   mobj.state := @states[integer(mobj.state)];
+  mobj.validcount := 0;
+  mobj.lightvalidcount := 0;
+  mobj.rendervalidcount := 0;
   if mobj.player <> nil then
   begin
     mobj.player := @players[integer(mobj.player) - 1];
@@ -453,6 +478,7 @@ begin
   mobj.floorz := P_3dFloorHeight(mobj);
   mobj.ceilingz := P_3dCeilingHeight(mobj);
   SetMobjPtr(PInteger(@mobj.target));
+  SetMobjPtr(PInteger(@mobj.tracer));
   case mobj._type of
     Ord(MT_KORAX_SPIRIT1),
     Ord(MT_KORAX_SPIRIT2),
@@ -859,6 +885,25 @@ begin
     StreamOutLong(sec.midsec);
     StreamOutLong(sec.midline);
     StreamOutLong(sec.gravity);
+
+    // JVAL: 20200221 - Texture angle
+    StreamOutLongWord(sec.floorangle);
+    StreamOutLong(sec.flooranglex);
+    StreamOutLong(sec.floorangley);
+    StreamOutLongWord(sec.ceilingangle);
+    StreamOutLong(sec.ceilinganglex);
+    StreamOutLong(sec.ceilingangley);
+
+    // JVAL: 20200522 - Slope values
+    StreamOutFloat(sec.fa);
+    StreamOutFloat(sec.fb);
+    StreamOutFloat(sec.fd);
+    StreamOutFloat(sec.fic);
+    StreamOutFloat(sec.ca);
+    StreamOutFloat(sec.cb);
+    StreamOutFloat(sec.cd);
+    StreamOutFloat(sec.cic);
+
     StreamOutLong(sec.num_saffectees);
     for j := 0 to sec.num_saffectees - 1 do
       StreamOutLong(sec.saffectees[j]);
@@ -877,9 +922,8 @@ begin
     for j := 0 to 1 do
     begin
       if li.sidenum[j] = -1 then
-      begin
         continue;
-      end;
+
       si := @sides[li.sidenum[j]];
       StreamOutLong(si.textureoffset);
       StreamOutLong(si.rowoffset);
@@ -950,6 +994,35 @@ begin
       sec.gravity := GET_LONGWORD
     else
       sec.gravity := GRAVITY;
+    if LOADVERSION >= VERSION206 then
+    begin
+      sec.floorangle := GET_LONGWORD;
+      sec.flooranglex := GET_LONG;
+      sec.floorangley := GET_LONG;
+      sec.ceilingangle := GET_LONGWORD;
+      sec.ceilinganglex := GET_LONG;
+      sec.ceilingangley := GET_LONG;
+
+      // JVAL: 20200522 - Slope values
+      sec.fa := GET_FLOAT;
+      sec.fb := GET_FLOAT;
+      sec.fd := GET_FLOAT;
+      sec.fic := GET_FLOAT;
+      sec.ca := GET_FLOAT;
+      sec.cb := GET_FLOAT;
+      sec.cd := GET_FLOAT;
+      sec.cic := GET_FLOAT;
+    end
+    else
+    begin
+      sec.floorangle := 0;
+      sec.flooranglex := 0;
+      sec.floorangley := 0;
+      sec.ceilingangle := 0;
+      sec.ceilinganglex := 0;
+      sec.ceilingangley := 0;
+    end;
+
     if LOADVERSION >= VERSION142 then
     begin
       sec.num_saffectees := GET_LONG;
@@ -1050,10 +1123,12 @@ begin
   if corpse then
   begin
     mobj.target := Pmobj_t(MOBJ_NULL);
+    mobj.tracer := Pmobj_t(MOBJ_NULL);
   end
   else
   begin
     mobj.target := Pmobj_t(GetMobjNum(mobj.target));
+    mobj.tracer := Pmobj_t(GetMobjNum(mobj.tracer));
   end;
   case mobj._type of
     Ord(MT_KORAX_SPIRIT1),
@@ -1144,7 +1219,7 @@ begin
       thinker := thinker.next;
       continue;
     end;
-    if (Pmobj_t(thinker).player <> nil) and (not SavingPlayers) then
+    if (Pmobj_t(thinker).player <> nil) and not SavingPlayers then
     begin // Skipping player mobjs
       thinker := thinker.next;
       continue;
@@ -1218,6 +1293,8 @@ begin
       mobj.flags3_ex := 0;
       mobj.flags4_ex := 0;
       mobj.rendervalidcount := 0;
+
+      mobj.mass := mobjinfo[Ord(mobj._type)].mass;
     end
     else if LOADVERSION = VERSION141 then
     begin
@@ -1233,6 +1310,8 @@ begin
       mobj.flags3_ex := 0;
       mobj.flags4_ex := 0;
       mobj.rendervalidcount := 0;
+
+      mobj.mass := mobjinfo[Ord(mobj._type)].mass;
     end
     else if LOADVERSION <= VERSION204 then
     begin
@@ -1246,6 +1325,15 @@ begin
       mobj.flags3_ex := 0;
       mobj.flags4_ex := 0;
       mobj.rendervalidcount := 0;
+
+      mobj.mass := mobjinfo[Ord(mobj._type)].mass;
+    end
+    else if LOADVERSION <= VERSION205 then
+    begin
+      memcpy(mobj, saveptr, SizeOf(mobj_t205));
+      incp(saveptr, SizeOf(mobj_t205));
+
+      mobj.mass := mobjinfo[Ord(mobj._type)].mass;
     end
     else
     begin
@@ -1833,6 +1921,8 @@ begin
   versionText := HXS_VERSION_TEXT;
   StreamOutString(versionText);
 
+  P_ArchiveScreenShot;
+
   // Place a header marker
   StreamOutLong(ASEG_GAME_HEADER);
 
@@ -1967,11 +2057,15 @@ begin
     LOADVERSION := VERSION204
   else if vstring = HXS_VERSION_TEXT_205 then
     LOADVERSION := VERSION205
+  else if vstring = HXS_VERSION_TEXT_206 then
+    LOADVERSION := VERSION206
   else
   begin // Bad version
     I_Warning('SV_LoadGame(): Game is from unsupported version'#13#10);
     exit;
   end;
+
+  P_UnArchiveScreenShot;
 
   AssertSegment(ASEG_GAME_HEADER);
 
@@ -2286,5 +2380,22 @@ begin
   end;
 end;
 
+
+procedure P_ArchiveScreenShot;
+var
+  i: integer;
+begin
+  for i := 0 to MNSCREENSHOT_MAGIC_SIZE - 1 do
+    StreamOutByte(mn_screenshotbuffer.header[i]);
+  for i := 0 to MN_SCREENSHOTSIZE - 1 do
+    StreamOutByte(mn_screenshotbuffer.data[i]);
+end;
+
+procedure P_UnArchiveScreenShot;
+begin
+  // Nothing to do, just inc the buffer
+  if LOADVERSION >= VERSION206 then
+    saveptr := pointer(integer(saveptr) + SizeOf(menuscreenbuffer_t));
+end;
 
 end.

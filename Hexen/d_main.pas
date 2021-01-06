@@ -4,7 +4,7 @@
 //  based on original Linux Doom as published by "id Software", on
 //  Hexen source as published by "Raven" software and DelphiDoom
 //  as published by Jim Valavanis.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -1671,9 +1671,13 @@ begin
     SCREENWIDTH := atoi(s1);
     if SCREENWIDTH > MAXWIDTH then
       SCREENWIDTH := MAXWIDTH;
+    if SCREENWIDTH < MINWIDTH then
+      SCREENWIDTH := MINWIDTH;
     SCREENHEIGHT := atoi(s2);
     if SCREENHEIGHT > MAXHEIGHT then
       SCREENHEIGHT := MAXHEIGHT;
+    if SCREENHEIGHT < MINHEIGHT then
+      SCREENHEIGHT := MINHEIGHT;
   end;
 
   p := M_CheckParm('-fullhd');
@@ -2073,7 +2077,6 @@ begin
   printf('MT_Init: Initializing multithreading utilities.'#13#10);
   MT_Init;
 
-
   SUC_Progress(69);
 
   printf('R_Init: Init HEXEN refresh daemon.'#13#10);
@@ -2147,7 +2150,7 @@ begin
   printf('C_Init: Initializing console.'#13#10);
   C_Init;
 
-  p := M_CheckParm('-keyboardmode');
+  p := M_CheckParm('');
   if (p > 0) and (p < myargc - 1) then
   begin
     inc(p);
@@ -2156,7 +2159,7 @@ begin
       M_SetKeyboardMode(0)
     else if (kparm = '1') or (kparm = 'WASD') then
       M_SetKeyboardMode(1)
-    else if (kparm = '1') or (kparm = 'ESDF') then
+    else if (kparm = '2') or (kparm = 'ESDF') then
       M_SetKeyboardMode(2);
   end;
 

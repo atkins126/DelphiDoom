@@ -10,7 +10,7 @@
 //  Copyright (C) 1993-1996 by id Software, Inc.
 //  Copyright (C) 2005 Simon Howard
 //  Copyright (C) 2010 James Haley, Samuel Villarreal
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -306,6 +306,7 @@ var
   texturedautomap: boolean;
 
 procedure AM_rotate(x: Pfixed_t; y: Pfixed_t; a: angle_t; xpos, ypos: fixed_t);
+
 procedure AM_ShutDown;
 
 implementation
@@ -322,7 +323,7 @@ uses
 {$IFNDEF OPENGL}
   r_draw,
   r_hires,
-{$ELSE}  
+{$ELSE}
   gl_automap,
 {$ENDIF}
   v_data,
@@ -514,7 +515,7 @@ begin
     min_scale_mtof := a
   else
     min_scale_mtof := b;
-    
+
   max_scale_mtof := FixedDiv(f_h * FRACUNIT, 2 * PLAYERRADIUS);
 end;
 

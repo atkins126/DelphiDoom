@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -94,6 +94,13 @@ type
     function PF_gravity(p: TDStrings): string;
     function PF_pushfactor(p: TDStrings): string;
     function PF_scale(p: TDStrings): string;
+    function PF_mass(p: TDStrings): string;
+    function PF_special(p: TDStrings): string;
+    function PF_arg1(p: TDStrings): string;
+    function PF_arg2(p: TDStrings): string;
+    function PF_arg3(p: TDStrings): string;
+    function PF_arg4(p: TDStrings): string;
+    function PF_arg5(p: TDStrings): string;
     // Pascalscript map & world variables
     function PF_MAPSTR(p: TDStrings): string;
     function PF_WORLDSTR(p: TDStrings): string;
@@ -168,6 +175,13 @@ begin
   AddFunc('GRAVITY', PF_gravity, 0);
   AddFunc('PUSHFACTOR', PF_pushfactor, 0);
   AddFunc('SCALE', PF_scale, 0);
+  AddFunc('MASS', PF_mass, 0);
+  AddFunc('SPECIAL', PF_special, 0);
+  AddFunc('ARG1', PF_arg1, 0);
+  AddFunc('ARG2', PF_arg2, 0);
+  AddFunc('ARG3', PF_arg3, 0);
+  AddFunc('ARG4', PF_arg4, 0);
+  AddFunc('ARG5', PF_arg5, 0);
   // Pascalscript map & world variables
   AddFunc('MAPSTR', PF_MAPSTR, 1);
   AddFunc('WORLDSTR', PF_WORLDSTR, 1);
@@ -409,6 +423,41 @@ end;
 function TActorEvaluator.PF_scale(p: TDStrings): string;
 begin
   result := ftoa(factor.scale / FRACUNIT);
+end;
+
+function TActorEvaluator.PF_mass(p: TDStrings): string;
+begin
+  result := itoa(factor.mass);
+end;
+
+function TActorEvaluator.PF_special(p: TDStrings): string;
+begin
+  result := itoa(factor.special);
+end;
+
+function TActorEvaluator.PF_arg1(p: TDStrings): string;
+begin
+  result := itoa(factor.args[0]);
+end;
+
+function TActorEvaluator.PF_arg2(p: TDStrings): string;
+begin
+  result := itoa(factor.args[1]);
+end;
+
+function TActorEvaluator.PF_arg3(p: TDStrings): string;
+begin
+  result := itoa(factor.args[2]);
+end;
+
+function TActorEvaluator.PF_arg4(p: TDStrings): string;
+begin
+  result := itoa(factor.args[3]);
+end;
+
+function TActorEvaluator.PF_arg5(p: TDStrings): string;
+begin
+  result := itoa(factor.args[4]);
 end;
 
 // Pascalscript map & world variables

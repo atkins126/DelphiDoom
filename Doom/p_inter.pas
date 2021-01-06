@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -953,7 +953,7 @@ begin
   begin
     ang := R_PointToAngle2(inflictor.x, inflictor.y, target.x, target.y);
 
-    mass := target.info.mass;
+    mass := target.mass;
     if mass = 0 then
     begin
       I_DevWarning('P_DamageMobj(): Target (%s) mass is zero'#13#10, [target.info.name]);
