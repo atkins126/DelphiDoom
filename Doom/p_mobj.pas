@@ -193,7 +193,7 @@ begin
     begin
       if st.params <> nil then
         st.params.Actor := mobj;
-      st.action.acp1(mobj);
+      st.action.acp2(mobj, nil);
     end;
 
     state := st.nextstate;
@@ -1438,7 +1438,8 @@ var
   th: Pmobj_t;
 begin
   z := z + _SHL(N_Random - N_Random, 10);
-  th := P_SpawnMobj(x, y, z, Ord(MT_GREENBLOOD));
+
+  th := P_SpawnMobj(x, y, z, MT_GREENBLOOD);
   th.momz := FRACUNIT * 2;
   th.tics := th.tics - (N_Random and 3);
 
@@ -1448,9 +1449,9 @@ begin
   if th.flags3_ex and MF3_EX_BLOODIGNOREDAMAGE = 0 then
   begin
     if (damage <= 12) and (damage >= 9) then
-      P_SetMobjState(th, S_GREENBLOOD2)
+      P_SetMobjRelativeState(th, 1)
     else if damage < 9 then
-      P_SetMobjState(th, S_GREENBLOOD3);
+      P_SetMobjRelativeState(th, 2);
   end;
 end;
 
@@ -1459,7 +1460,8 @@ var
   th: Pmobj_t;
 begin
   z := z + _SHL(N_Random - N_Random, 10);
-  th := P_SpawnMobj(x, y, z, Ord(MT_BLUEBLOOD));
+
+  th := P_SpawnMobj(x, y, z, MT_BLUEBLOOD);
   th.momz := FRACUNIT * 2;
   th.tics := th.tics - (N_Random and 3);
 
@@ -1469,9 +1471,9 @@ begin
   if th.flags3_ex and MF3_EX_BLOODIGNOREDAMAGE = 0 then
   begin
     if (damage <= 12) and (damage >= 9) then
-      P_SetMobjState(th, S_BLUEBLOOD2)
+      P_SetMobjRelativeState(th, 1)
     else if damage < 9 then
-      P_SetMobjState(th, S_BLUEBLOOD3);
+      P_SetMobjRelativeState(th, 2);
   end;
 end;
 
@@ -1998,7 +2000,7 @@ begin
           mo.momx := (P_Random - P_Random) * 256;
           mo.momy := (P_Random - P_Random) * 256;
           mo.momz := FRACUNIT + (P_Random * 256);
-          S_StartSound(mo, Ord(sfx_sgloop));
+          S_StartSound(mo, Ord(sfx_sgloo2));
         end;
         result := FLOOR_NUKAGE;
         exit;

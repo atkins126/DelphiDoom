@@ -1329,6 +1329,26 @@ end;
 // M_DrawSaveLoadScreenShot
 // JVAL: 20200303 - Draw Game Screenshot in Load/Save screens
 //
+var
+  sspatch: integer = -2;
+
+function ss_patch: integer;
+begin
+  if sspatch <> -2 then
+  begin
+    result := sspatch;
+    exit;
+  end;
+
+  if customgame = cg_hacx then
+    result := W_CheckNumForName('M_SSHOTH')
+  else if customgame in [cg_chex, cg_chex2] then
+    result := W_CheckNumForName('M_SSHOTC')
+  else
+    result := W_CheckNumForName('M_SSHOT');
+  sspatch := result;
+end;
+
 procedure M_DrawSaveLoadScreenShot(const screenshot: Pmenuscreenbuffer_t; const mnpos: integer);
 const
   SHOT_X = 320 - MN_SCREENSHOTWIDTH - 4;
@@ -1336,6 +1356,7 @@ const
 var
   i, x, y, spos: integer;
   b: byte;
+  patchno: integer;
 begin
   if screenshot = nil then
     exit;
@@ -1352,7 +1373,9 @@ begin
         screenshot.data[i] := aprox_black;
   end;
 
-  V_DrawPatch(SHOT_X - 8, SHOT_Y + mnpos * Loaddef.itemheight + Loaddef.itemheight div 2 - 3, SCN_TMP, 'M_SSHOT', false);
+  patchno := ss_patch;
+  if patchno >= 0 then
+    V_DrawPatch(SHOT_X - 8, SHOT_Y + mnpos * Loaddef.itemheight + Loaddef.itemheight div 2 - 3, SCN_TMP, patchno, false);
 
   // Draw screenshot starting at (SHOT_X,SHOT_Y) position
   for y := 0 to MN_SCREENSHOTHEIGHT - 1 do
@@ -1500,17 +1523,24 @@ begin
   M_ReadSaveStrings;
 end;
 
+procedure M_StartSound(origin: pointer; sfx_id: integer);
+begin
+  if gamestate = GS_ENDOOM then
+    exit;
+  S_StartSound(origin, sfx_id);
+end;
+
 //
 //      M_QuickSave
 //
 procedure M_SwtchnSound;
 begin
-  S_StartSound(nil, Ord(sfx_swtchn));
+  M_StartSound(nil, Ord(sfx_swtchn));
 end;
 
 procedure M_SwtchxSound;
 begin
-  S_StartSound(nil, Ord(sfx_swtchx));
+  M_StartSound(nil, Ord(sfx_swtchx));
 end;
 
 
@@ -1529,7 +1559,7 @@ var
 begin
   if not usergame then
   begin
-    S_StartSound(nil, Ord(sfx_oof));
+    M_StartSound(nil, Ord(sfx_oof));
     exit;
   end;
 
@@ -2584,7 +2614,7 @@ procedure M_CmdEndGame;
 begin
   if not usergame then
   begin
-    S_StartSound(nil, Ord(sfx_oof));
+    M_StartSound(nil, Ord(sfx_oof));
     exit;
   end;
 
@@ -2668,9 +2698,9 @@ begin
   if not netgame then
   begin
     if gamemode = commercial then
-      S_StartSound(nil, quitsounds2[_SHR(gametic, 2) and 7])
+      M_StartSound(nil, quitsounds2[_SHR(gametic, 2) and 7])
     else
-      S_StartSound(nil, quitsounds[_SHR(gametic, 2) and 7]);
+      M_StartSound(nil, quitsounds[_SHR(gametic, 2) and 7]);
     I_WaitVBL(1000);
   end;
   G_Quit;
@@ -2866,6 +2896,12 @@ var
   i: integer;
   palette: PByteArray;
 begin
+  if gamestate = GS_ENDOOM then
+  begin
+    result := false;
+    exit;
+  end;
+
   if (ev.data1 = KEY_RALT) or (ev.data1 = KEY_LALT) then
   begin
     m_altdown := ev._type = ev_keydown;
@@ -3066,7 +3102,7 @@ begin
             exit;
           end;
           M_SizeDisplay(0);
-          S_StartSound(nil, Ord(sfx_stnmov));
+          M_StartSound(nil, Ord(sfx_stnmov));
           result := true;
           exit;
         end;
@@ -3078,7 +3114,7 @@ begin
             exit;
           end;
           M_SizeDisplay(1);
-          S_StartSound(nil, Ord(sfx_stnmov));
+          M_StartSound(nil, Ord(sfx_stnmov));
           result := true;
           exit;
         end;
@@ -3215,7 +3251,7 @@ begin
         itemOn := -1;
         repeat
           inc(itemOn);
-          S_StartSound(nil, Ord(sfx_pstop));
+          M_StartSound(nil, Ord(sfx_pstop));
         until currentMenu.menuitems[itemOn].status <> -1;
         result := true;
         exit;
@@ -3225,7 +3261,7 @@ begin
         itemOn := currentMenu.numitems;
         repeat
           dec(itemOn);
-          S_StartSound(nil, Ord(sfx_pstop));
+          M_StartSound(nil, Ord(sfx_pstop));
         until currentMenu.menuitems[itemOn].status <> -1;
         result := true;
         exit;
@@ -3237,7 +3273,7 @@ begin
             itemOn := 0
           else
             inc(itemOn);
-          S_StartSound(nil, Ord(sfx_pstop));
+          M_StartSound(nil, Ord(sfx_pstop));
         until currentMenu.menuitems[itemOn].status <> -1;
         result := true;
         exit;
@@ -3249,7 +3285,7 @@ begin
             itemOn := currentMenu.numitems - 1
           else
             dec(itemOn);
-          S_StartSound(nil, Ord(sfx_pstop));
+          M_StartSound(nil, Ord(sfx_pstop));
         until currentMenu.menuitems[itemOn].status <> -1;
         result := true;
         exit;
@@ -3259,7 +3295,7 @@ begin
         if Assigned(currentMenu.menuitems[itemOn].routine) and
           (currentMenu.menuitems[itemOn].status = 2) then
         begin
-          S_StartSound(nil, Ord(sfx_stnmov));
+          M_StartSound(nil, Ord(sfx_stnmov));
           currentMenu.menuitems[itemOn].routine(0);
         end
         else if (currentMenu.leftMenu <> nil) and not (ev._type in [ev_mouse, ev_joystick]) then
@@ -3277,7 +3313,7 @@ begin
         if Assigned(currentMenu.menuitems[itemOn].routine) and
           (currentMenu.menuitems[itemOn].status = 2) then
         begin
-          S_StartSound(nil, Ord(sfx_stnmov));
+          M_StartSound(nil, Ord(sfx_stnmov));
           currentMenu.menuitems[itemOn].routine(1);
         end
         else if (currentMenu.rightMenu <> nil) and not (ev._type in [ev_mouse, ev_joystick]) then
@@ -3299,12 +3335,12 @@ begin
           if currentMenu.menuitems[itemOn].status = 2 then
           begin
             currentMenu.menuitems[itemOn].routine(1); // right arrow
-            S_StartSound(nil, Ord(sfx_stnmov));
+            M_StartSound(nil, Ord(sfx_stnmov));
           end
           else
           begin
             currentMenu.menuitems[itemOn].routine(itemOn);
-            S_StartSound(nil, Ord(sfx_pistol));
+            M_StartSound(nil, Ord(sfx_pistol));
           end;
         end;
         result := true;
@@ -3342,7 +3378,7 @@ begin
         if currentMenu.menuitems[i].alphaKey = Chr(ch) then
         begin
           itemOn := i;
-          S_StartSound(nil, Ord(sfx_pstop));
+          M_StartSound(nil, Ord(sfx_pstop));
           result := true;
           exit;
         end;
@@ -3350,7 +3386,7 @@ begin
         if currentMenu.menuitems[i].alphaKey = Chr(ch) then
         begin
           itemOn := i;
-          S_StartSound(nil, Ord(sfx_pstop));
+          M_StartSound(nil, Ord(sfx_pstop));
           result := true;
           exit;
         end;

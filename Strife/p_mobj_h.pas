@@ -364,6 +364,12 @@ const
   MF3_EX_NOCRASH = 16;
   // Blood do not check damage
   MF3_EX_BLOODIGNOREDAMAGE = 32;
+  // No render interpolation
+  MF3_EX_NORENDERINTERPOLATION = 64;
+  // Line Activate (MBF)
+  MF3_EX_LINEDONE = 128;
+  // Flip sprite
+  MF3_EX_FLIPSPRITE = 256;
 
 type
 // Map Object definition.
@@ -510,6 +516,7 @@ type
     mass: integer;
     args: array[0..4] of integer;
     special: integer;
+    master: Pmobj_t;
   end;
   Tmobj_tPArray = array[0..$FFFF] of Pmobj_t;
   Pmobj_tPArray = ^Tmobj_tPArray;

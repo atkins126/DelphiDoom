@@ -72,6 +72,8 @@ function P_ChangeSector(sector: Psector_t; crunch: boolean): boolean;
 procedure P_SlideMove(mo: Pmobj_t);
 
 function P_CheckOnmobj(thing: Pmobj_t): Pmobj_t;
+function P_TestMobjLocation(mobj: Pmobj_t): boolean;
+
 
 var
   linetarget: Pmobj_t;  // who got hit (or NULL)
@@ -2363,9 +2365,9 @@ begin
     // spray blood in a random direction
     // JVAL: player with custom blood color :)
     if thing.flags2_ex and MF2_EX_BLUEBLOOD <> 0 then
-      mo := P_SpawnMobj(thing.x, thing.y, thing.z + thing.height div 2, Ord(MT_BLUEBLOOD))
+      mo := P_SpawnMobj(thing.x, thing.y, thing.z + thing.height div 2, MT_BLUEBLOOD)
     else if thing.flags2_ex and MF2_EX_GREENBLOOD <> 0 then
-      mo := P_SpawnMobj(thing.x, thing.y, thing.z + thing.height div 2, Ord(MT_GREENBLOOD))
+      mo := P_SpawnMobj(thing.x, thing.y, thing.z + thing.height div 2, MT_GREENBLOOD)
     else
       mo := P_SpawnMobj(thing.x, thing.y, thing.z + thing.height div 2, Ord(MT_BLOOD));
 
@@ -2699,6 +2701,37 @@ begin
       node := node.m_tnext;
   end;
   
+end;
+
+//----------------------------------------------------------------------------
+//
+// FUNC P_TestMobjLocation
+//
+// Returns true if the mobj is not blocked by anything at its current
+// location, otherwise returns false.
+//
+//----------------------------------------------------------------------------
+
+function P_TestMobjLocation(mobj: Pmobj_t): boolean;
+var
+  flags: integer;
+begin
+  flags := mobj.flags;
+  mobj.flags := mobj.flags and not MF_PICKUP;
+  if P_CheckPosition(mobj, mobj.x, mobj.y) then
+  begin // XY is ok, now check Z
+    mobj.flags := flags;
+    if (mobj.z < mobj.floorz) or
+       (mobj.z + mobj.height > mobj.ceilingz) then
+    begin // Bad Z
+      result := false;
+      exit;
+    end;
+    result := true;
+    exit;
+  end;
+  mobj.flags := flags;
+  result := false;
 end;
 
 end.

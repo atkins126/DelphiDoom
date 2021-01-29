@@ -30,6 +30,54 @@ Added A_JumpIfTargetOutsideMeleeRange & A_JumpIfTargetInsideMeleeRange ACTORDEF 
 Added A_JumpIfTracerCloser ACTORDEF function.
 Save tracer in saved game.
 Mass field for mobjs.
+Added MF3_EX_NORENDERINTERPOLATION mobj flag. When set to true, the renderer does not interpolate the mobj.
+A lot of new ACTORDEF functions to improve ZDoom compatibility:
+  - A_SetMass(mass: integer)
+  - A_SetTargetMass(mass: integer)
+  - A_SetTracerMass(mass: integer)
+  - A_CheckSight(offset: integer)
+  - A_CheckSightOrRange(distance: float, offset: integer, [twodi: boolean=false])
+  - A_CheckRange(distance: float, offset: integer, [twodi: boolean=false])
+  - A_CountdownArg(arg: integer, offset: integer)
+  - A_SetArg(arg: integer, value: integer)
+  - A_SetSpecial(special: integer, [arg1, arg2, arg3, arg4, arg5: integer])
+  - A_CheckFlag(flag: string, offset: integer, [aaprt: AAPTR])
+  - A_SetAngle(angle: integer, [flags: integer], [aaprt: AAPTR])
+  - A_SetUserVar(varname: string, value: integer)
+  - A_SetUserArray(varname: string, index: integer, value: integer)
+  - A_SetTics(tics: integer)
+  - A_DropItem(spawntype: string, amount: integer, chance: integer)
+  - A_DamageSelf(actor: Pmobj_t)
+  - A_DamageTarget(const damage: integer)
+  - A_DamageTracer(const damage: integer)
+  - A_KillTarget
+  - A_KillTracer
+  - A_RemoveTarget([flags: integer])
+  - A_RemoveTracer([flags: integer])
+  - A_Remove(aaprt: AAPTR, [flags: integer])
+  - A_SetFloatBobPhase(bob: integer)
+  - A_Detonate
+  - A_CustomMeleeAttack
+  - A_CustomComboAttack
+  - A_SetRenderStyle
+  - A_FadeTo
+  - A_SetSize
+DEHACKED export will add a comment with command line parameters.
+No delay to return to desktop when finished.
+Corrected DEHACKED export to ACTORDEF (renderstyle field).
+Added A_Spawn, A_Face, A_Scratch & A_RandomJump functions.
+Fixed DEHACKED conflict with demo playback.
+Avoid crash in OpenGL mode if sprite frames are missing.
+Added new flag MF3_EX_FLIPSPRITE, when set it flips the mobj sprite.
+ACTORDEF functions for flipping sprite: A_FlipSprite(), A_NoFlipSprite(), A_RandomFlipSprite() &A_RandomNoFlipSprite().
+Support for various sound file formats using libsndfile, libflac, libvorbis & libogg.
+Added Overlay.DrawLine & OverlayDrawLine PascalScript functions. params -> (const ticks: Integer; const red, green, blue: byte; const x1, y1, x2, y2: Integer)
+Added overlaydrawline console command. Usage is overlaydrawline [ticks] [x1] [y1] [x2] [y2] [red] [green] [blue].
+Fixed problem with Overlay display after changing screen dimentions.
+Added overlaydrawpatch console command, usage is "overlaydrawpatch [ticks] [x] [y] [patch]".
+Added Overlay.DrawPatchStretched & OverlayDrawPatchStretched PascalScript functions. params -> (const ticks: Integer; const patchname: string; const x1, y1, x2, y2: Integer)
+Added overlaydrawpatchstretched console command. Usage is overlaydrawpatchstretched [ticks] [x1] [y1] [x2] [y2] [patch].
+Boom generalized lines constants available in PascalScript.
 
 Version 2.0.5 build 727 - (4/12/2020)
 -----------------------

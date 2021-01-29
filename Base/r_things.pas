@@ -210,7 +210,7 @@ begin
 
   // the lump is only used for one rotation
   if sprtemp[frame].rotate = 0 then
-    I_Warning('R_InitSprites(): Sprite %s frame %s has rotations and a rot=0 lump'#13#10,
+    I_DevWarning('R_InitSprites(): Sprite %s frame %s has rotations and a rot=0 lump'#13#10,
       [spritename, Chr(Ord('A') + frame)]);
 
   // JVAL: Up to 32 sprite rotations
@@ -1635,7 +1635,7 @@ begin
     end;
   end;
 
-  if flip then
+  if flip <> (thing.flags3_ex and MF3_EX_FLIPSPRITE <> 0) then
   begin
     vis.startfrac := spritewidth[lump] - 1;
     vis.xiscale := -iscale;
@@ -1647,7 +1647,7 @@ begin
   end;
   {$ENDIF}
 {$IFDEF OPENGL}
-  vis.flip := flip;
+  vis.flip := flip <> (thing.flags3_ex and MF3_EX_FLIPSPRITE <> 0);
 {$ENDIF}
 
 {$IFNDEF OPENGL}

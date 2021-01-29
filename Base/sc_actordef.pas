@@ -72,6 +72,7 @@ uses
   r_renderstyle,
   rtl_types,
   sounds,
+  sc_consts,
   sc_engine,
   sc_states,
   sc_tokens,
@@ -1295,9 +1296,9 @@ var
       Info_AddMobjNameAlias(mobj.name, Info_GetMobjName(mobj.replacesid));
     end
     else
-      AddRes('NewThing ' + mobj.name);
+      AddRes('NewThing "' + mobj.name + '"');
     if mobj.inheritsfrom <> '' then
-      AddRes('Inheritsfrom = ' + mobj.inheritsfrom)
+      AddRes('Inheritsfrom = "' + mobj.inheritsfrom + '"')
     else
       AddRes('Inheritsfrom = -1');
 {$IFDEF STRIFE}
@@ -2448,6 +2449,7 @@ procedure SC_Init;
 begin
   soundaliases := TDStringList.Create;
   SC_InitActorEvaluator;
+  SC_InitConsts;
   C_AddCmd('DEH_PrintActordef, PrintActordef', @DEH_PrintActordef);
   C_AddCmd('DEH_SaveActordef, SaveActordef', @DEH_SaveActordef);
 end;
@@ -2456,6 +2458,7 @@ procedure SC_ShutDown;
 begin
   soundaliases.Free;
   statenames.Free;
+  SC_ShutDownConsts;
   SC_ShutDownActorEvaluator;
 end;
 
@@ -2708,7 +2711,7 @@ begin
   {$ENDIF}
   if m.renderstyle <> mrs_normal then
   begin
-    AddLn('Rendersyle ' + renderstyle_tokens[Ord(m.renderstyle)]);
+    AddLn('Renderstyle ' + renderstyle_tokens[Ord(m.renderstyle)]);
     if m.alpha > 0 then
       AddLn('Alpha ' + ftoafmt('2.4', m.alpha / FRACUNIT));
   end;

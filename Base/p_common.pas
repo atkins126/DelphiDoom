@@ -31,8 +31,10 @@ unit p_common;
 interface
 
 uses
+  d_player,
   m_fixed,
   info_h,
+  p_pspr_h,
   p_mobj_h;
 
 const
@@ -347,6 +349,74 @@ procedure A_CheckSightOrRange(actor: Pmobj_t);
 
 procedure A_CheckRange(actor: Pmobj_t);
 
+procedure A_CountdownArg(actor: Pmobj_t);
+
+procedure A_SetArg(actor: Pmobj_t);
+
+procedure A_SetSpecial(actor: Pmobj_t);
+
+procedure A_CheckFlag(actor: Pmobj_t);
+
+procedure A_SetAngle(actor: Pmobj_t);
+
+procedure A_SetUserVar(actor: Pmobj_t);
+
+procedure A_SetUserArray(actor: Pmobj_t);
+
+procedure A_SetTics(actor: Pmobj_t);
+
+procedure A_DropItem(actor: Pmobj_t);
+
+procedure A_DamageSelf(actor: Pmobj_t);
+
+procedure A_DamageTarget(actor: Pmobj_t);
+
+procedure A_DamageTracer(actor: Pmobj_t);
+
+procedure A_KillTarget(actor: Pmobj_t);
+
+procedure A_KillTracer(actor: Pmobj_t);
+
+procedure A_RemoveTarget(actor: Pmobj_t);
+
+procedure A_RemoveTracer(actor: Pmobj_t);
+
+procedure A_Remove(actor: Pmobj_t);
+
+procedure A_SetFloatBobPhase(actor: Pmobj_t);
+
+procedure A_Detonate(actor: Pmobj_t);
+
+procedure A_Spawn(actor: Pmobj_t);
+
+procedure A_Face(actor: Pmobj_t);
+
+procedure A_Scratch(actor: Pmobj_t);
+
+procedure A_RandomJump(obj: pointer; psp: Ppspdef_t);
+
+{$IFNDEF HEXEN}
+procedure A_LineEffect(actor: Pmobj_t);
+{$ENDIF}
+
+procedure A_FlipSprite(actor: Pmobj_t);
+
+procedure A_RandomFlipSprite(actor: Pmobj_t);
+
+procedure A_NoFlipSprite(actor: Pmobj_t);
+
+procedure A_RandomNoFlipSprite(actor: Pmobj_t);
+
+procedure A_CustomMeleeAttack(actor: Pmobj_t);
+
+procedure A_CustomComboAttack(actor: Pmobj_t);
+
+procedure A_SetRenderStyle(actor: Pmobj_t);
+
+procedure A_FadeTo(actor: Pmobj_t);
+
+procedure A_SetSize(actor: Pmobj_t);
+
 const
   FLOATBOBSIZE = 64;
   FLOATBOBMASK = FLOATBOBSIZE - 1;
@@ -377,7 +447,61 @@ const
 // Slip while descenting if sloped
   SF_SLIPSLOPEDESCENT = 2;
 
+// A_SpawnItemEx Flags
+const
+  SIXF_TRANSFERTRANSLATION = 1;
+  SIXF_ABSOLUTEPOSITION = 2;
+  SIXF_ABSOLUTEANGLE = 4;
+  SIXF_ABSOLUTEMOMENTUM = 8;
+  SIXF_SETMASTER = 16;
+  SIXF_NOCHECKPOSITION = 32;
+  SIXF_TELEFRAG = 64;
+  // 128 is used by Skulltag!
+  SIXF_TRANSFERAMBUSHFLAG = 256;
+  SIXF_TRANSFERPITCH = $200;
+  SIXF_TRANSFERPOINTERS = $400;
+  SIXF_USEBLOODCOLOR = $800;
+  SIXF_CLEARCALLERTID = $1000;
+  SIXF_MULTIPLYSPEED = $2000;
+  SIXF_TRANSFERSCALE = $4000;
+  SIXF_TRANSFERSPECIAL = $8000;
+  SIXF_CLEARCALLERSPECIAL = $10000;
+  SIXF_TRANSFERSTENCILCOL = $20000;
+  SIXF_TRANSFERALPHA = $40000;
+  SIXF_TRANSFERRENDERSTYLE = $80000;
+  SIXF_SETTARGET = $100000;
+  SIXF_SETTRACER = $200000;
+  SIXF_NOPOINTERS = $400000;
+  SIXF_ORIGINATOR = $800000;
+  SIXF_TRANSFERSPRITEFRAME = $1000000;
+  SIXF_TRANSFERROLL = $2000000;
+  SIXF_ISTARGET = $4000000;
+  SIXF_ISMASTER = $8000000;
+  SIXF_ISTRACER = $10000000;
+
+// P_DoRemoveThing
+const
+  RMVF_MISSILES = 0;
+  RMVF_NOMONSTERS = 1;
+  RMVF_MISC = 2;
+  RMVF_EVERYTHING = 4;
+  RMVF_EXFILTER = 8;
+  RMVF_EXSPECIES = 16;
+  RMVF_EITHER = 32;
+
+const
+  SPF_FORCECLAMP = 1; // players always clamp
+  SPF_INTERPOLATE = 2;
+
+const
+  FTF_REMOVE = 1;
+  FTF_CLAMP = 2;
+
 function P_TicsFromState(const st: Pstate_t): integer;
+
+procedure P_SetMobjRelativeState(const mo: Pmobj_t; const offset: integer);
+
+function PlayerToId(const p: Pplayer_t): integer;
 
 implementation
 
@@ -385,23 +509,29 @@ uses
   d_delphi,
   doomdef,
   deh_main,
-  d_player,
   m_vectors,
   i_system,
   c_con,
   g_game,
   info,
   info_common,
+  info_rnd,
+  p_aaptr,
   p_enemy,
   p_extra,
+  p_inter,
   p_mobj,
   p_pspr,
   p_map,
   p_maputl,
   p_params,
+  p_setup,
   p_sight,
+  p_spec,
+  p_switch,
   psi_globals,
   r_renderstyle,
+  r_defs,
   r_main,
   sc_engine,
   sc_tokens,
@@ -1769,6 +1899,16 @@ procedure A_Playsound(actor: Pmobj_t);
 var
   sndidx: integer;
 begin
+  // JVAL: 20210109 - DEHEXTRA support
+  if actor.state.params = nil then
+  begin
+    if actor.state.misc2 <> 0 then
+      S_StartSound(nil, actor.state.misc1)
+    else
+      S_StartSound(actor, actor.state.misc1);
+    exit;
+  end;
+
   if not P_CheckStateParams(actor, 1) then
     exit;
 
@@ -2111,17 +2251,183 @@ begin
     mo.angle := actor.angle;
 end;
 
-// A_SpawnItemEx Flags
+function InitSpawnedItem(const self, mo: Pmobj_t; flags: integer): boolean;
 const
-  SIXF_TRANSFERTRANSLATION = 1;
-  SIXF_ABSOLUTEPOSITION = 2;
-  SIXF_ABSOLUTEANGLE = 4;
-  SIXF_ABSOLUTEMOMENTUM = 8;
-  SIXF_SETMASTER = 16;
-  SIXF_NOCHECKPOSITION = 32;
-  SIXF_TELEFRAG = 64;
-  // 128 is used by Skulltag!
-  SIXF_TRANSFERAMBUSHFLAG = 256;
+  MAXLOOP = 64;
+var
+  originator: Pmobj_t;
+  loop: integer;
+begin
+  if mo = nil then
+  begin
+    result := false;
+    exit;
+  end;
+
+  if flags and SIXF_TRANSFERTRANSLATION <> 0 then
+    mo.flags := (mo.flags and not MF_TRANSLATION) or (self.flags and MF_TRANSLATION);
+
+  if flags and SIXF_TRANSFERPOINTERS <> 0 then
+  begin
+    mo.target := self.target;
+    mo.master := self.master; // This will be overridden later if SIXF_SETMASTER is set
+    mo.tracer := self.tracer;
+  end;
+
+  originator := self;
+  
+  if flags and SIXF_ORIGINATOR = 0 then
+  begin
+    loop := 0;
+    while originator <> nil do
+    begin
+      if originator.flags and MF_MISSILE = 0 then
+        break;
+      if loop = MAXLOOP then
+        break;
+      originator := originator.target;
+      inc(loop);
+    end;
+  end;
+
+  if flags and SIXF_TELEFRAG <> 0 then
+  begin
+    P_TeleportMove(mo, mo.x, mo.y);
+    // This is needed to ensure consistent behavior.
+    // Otherwise it will only spawn if nothing gets telefragged
+    flags := flags or SIXF_NOCHECKPOSITION;
+  end;
+
+  if Info_IsMonster(mo._type) then
+  begin
+    if (flags and SIXF_NOCHECKPOSITION = 0) and not P_TestMobjLocation(mo) then
+    begin
+      // The monster is blocked so don't spawn it at all!
+      P_RemoveMobj(mo);
+      result := false;
+      exit;
+    end
+    else if (originator <> nil) and (flags and SIXF_NOPOINTERS = 0) then
+    begin
+      if Info_IsMonster(originator._type) then
+      begin
+        // If this is a monster transfer all friendliness information
+        {$IFDEF STRIFE}
+        mo.flags := (mo.flags and not MF_ALLY) or (originator.flags and MF_ALLY);
+        {$ENDIF}
+        {$IFDEF DOOM}
+        mo.flags2_ex := (mo.flags2_ex and not MF2_EX_FRIEND) or (originator.flags2_ex and MF2_EX_FRIEND);
+        {$ENDIF}
+      end
+      else if originator.player <> nil then
+      begin
+        // A player always spawns a monster friendly to him
+        {$IFDEF STRIFE}
+        mo.flags := mo.flags or MF_ALLY;
+        {$ENDIF}
+        {$IFDEF DOOM}
+        mo.flags2_ex := mo.flags2_ex or MF2_EX_FRIEND;
+        {$ENDIF}
+      end;
+    end;
+  end
+  else if flags and SIXF_TRANSFERPOINTERS <> 0 then
+  begin
+    // If this is a missile or something else set the target to the originator
+    if originator <> nil then
+      mo.target := originator
+    else
+      mo.target := self;
+  end;
+
+  if flags and SIXF_NOPOINTERS <> 0 then
+  begin
+    //[MC]Intentionally eliminate pointers. Overrides TRANSFERPOINTERS, but is overridden by SETMASTER/TARGET/TRACER.
+    mo.target := nil;
+    mo.master := nil;
+    mo.tracer := nil;
+  end;
+
+  if flags and SIXF_SETMASTER <> 0 then
+  begin
+    // don't let it attack you (optional)!
+    mo.master := originator;
+  end;
+
+  if flags and SIXF_SETTARGET <> 0 then
+  begin
+    mo.target := originator;
+  end;
+
+  if flags and SIXF_SETTRACER <> 0 then
+  begin
+    mo.tracer := originator;
+  end;
+
+  if flags and SIXF_TRANSFERSCALE <> 0 then
+  begin
+    mo.scale := self.scale;
+  end;
+
+  if flags and SIXF_TRANSFERAMBUSHFLAG <> 0 then
+  begin
+    mo.flags := (mo.flags and not MF_AMBUSH) or (self.flags and MF_AMBUSH);
+  end;
+
+  {$IFDEF HEXEN}
+  if flags and SIXF_CLEARCALLERTID <> 0 then
+  begin
+    P_RemoveMobjFromTIDList(self);
+    self.tid := 0;
+    P_InsertMobjIntoTIDList(self, 0); // ?
+  end;
+  {$ENDIF}
+
+  if flags and SIXF_TRANSFERSPECIAL <> 0 then
+  begin
+    mo.special := self.special;
+    mo.args := self.args;
+  end;
+
+  if flags and SIXF_CLEARCALLERSPECIAL <> 0 then
+  begin
+    self.special := 0;
+    FillChar(self.args, SizeOf(self.args), Chr(0));
+  end;
+
+  if flags and SIXF_TRANSFERALPHA <> 0 then
+  begin
+    mo.alpha := self.alpha;
+  end;
+
+  if flags and SIXF_TRANSFERRENDERSTYLE <> 0 then
+  begin
+    mo.RenderStyle := self.RenderStyle;
+  end;
+
+  if flags and SIXF_TRANSFERSPRITEFRAME <> 0 then
+  begin
+    mo.sprite := self.sprite;
+    mo.frame := self.frame;
+  end;
+
+  if flags and SIXF_ISTARGET <> 0 then
+  begin
+    self.target := mo;
+  end;
+
+  if flags and SIXF_ISMASTER <> 0 then
+  begin
+    self.master := mo;
+  end;
+
+  if flags and SIXF_ISTRACER <> 0 then
+  begin
+    self.tracer := mo;
+  end;
+
+  result := true;
+end;
 
 //
 // A_SpawnItemEx(type, xofs, yofs, zofs, momx, momy, momz, Angle, flags, chance)
@@ -2180,12 +2486,12 @@ begin
   ang1 := actor.state.params.IntVal[7];
   flags := actor.state.params.IntVal[8];
 
-  if (flags and SIXF_ABSOLUTEANGLE) = 0 then
+  if flags and SIXF_ABSOLUTEANGLE = 0 then
     ang1 := ang1 + Actor.angle;
 
   ang := ang1 shr ANGLETOFINESHIFT;
 
-  if (flags and SIXF_ABSOLUTEPOSITION) <> 0 then
+  if flags and SIXF_ABSOLUTEPOSITION <> 0 then
   begin
     x := actor.x + xofs;
     y := actor.y + yofs;
@@ -2198,7 +2504,7 @@ begin
     y := actor.y + FixedMul(xofs, finesine[ang]) - FixedMul(yofs, finecosine[ang]);
   end;
 
-  if (flags and SIXF_ABSOLUTEMOMENTUM) = 0 then
+  if flags and SIXF_ABSOLUTEMOMENTUM = 0 then
   begin
     // Same orientation issue here!
     newxmom := FixedMul(momx, finecosine[ang]) + FixedMul(momy, finesine[ang]);
@@ -2206,16 +2512,33 @@ begin
     momx := newxmom;
   end;
 
-  mo := P_SpawnMobj(x, y, actor.z{ - actor.floorz} + zofs, mobj_no);
+  mo := P_SpawnMobj(x, y, actor.z + zofs, mobj_no);
 
   if mo <> nil then
   begin
-    mo.momx := momx;
-    mo.momy := momy;
-    mo.momz := momz;
     mo.angle := ang1;
-    if (flags and SIXF_TRANSFERAMBUSHFLAG) <> 0 then
-      mo.flags := (mo.flags and not MF_AMBUSH) or (actor.flags and MF_AMBUSH);
+    InitSpawnedItem(actor, mo, flags);
+    if flags and SIXF_MULTIPLYSPEED <> 0 then
+    begin
+      if mo.info.speed < 64 then
+      begin
+        mo.momx := momx * mo.info.speed;
+        mo.momy := momy * mo.info.speed;
+        mo.momz := momz * mo.info.speed;
+      end
+      else
+      begin
+        mo.momx := FixedMul(momx, mo.info.speed);
+        mo.momy := FixedMul(momy, mo.info.speed);
+        mo.momz := FixedMul(momz, mo.info.speed);
+      end;
+    end
+    else
+    begin
+      mo.momx := momx;
+      mo.momy := momy;
+      mo.momz := momz;
+    end;
   end;
 end;
 
@@ -2520,6 +2843,13 @@ procedure A_Turn(actor: Pmobj_t);
 var
   ang: angle_t;
 begin
+  // JVAL: 20210109 - DEHEXTRA support
+  if actor.state.params = nil then
+  begin
+    actor.angle := actor.angle + actor.state.misc1 * ANG1;
+    exit;
+  end;
+
   if not P_CheckStateParams(actor, 1) then
     exit;
 
@@ -3056,6 +3386,12 @@ begin
   if mo.health <= 0 then
     exit;
 
+  if h <= 0 then
+  begin
+    P_DamageMobj(mo, nil, nil, 10000);
+    exit;
+  end;
+
   mo.health := h;
   p := mo.player;
   if p <> nil then
@@ -3509,7 +3845,6 @@ begin
       actor.flags4_ex := actor.flags4_ex and not flg;
     exit;
   end;
-
 end;
 
 procedure A_CheckFloor(actor: Pmobj_t);
@@ -3753,5 +4088,853 @@ begin
     P_SetMobjState(actor, statenum_t(offset));
 end;
 
-end.
+//
+// A_CountdownArg(arg: integer; offset: integer);
+//
+procedure A_CountdownArg(actor: Pmobj_t);
+var
+  arg: integer;
+  sarg: string;
+  offset: integer;
+begin
+  if not P_CheckStateParams(actor, 2) then
+    exit;
 
+  if not actor.state.params.IsComputed[0] then
+  begin
+    sarg := strupper(actor.state.params.StrVal[0]);
+    if sarg = 'C_ARG1' then
+      actor.state.params.IntVal[0] := 0
+    else if sarg = 'C_ARG2' then
+      actor.state.params.IntVal[0] := 1
+    else if sarg = 'C_ARG3' then
+      actor.state.params.IntVal[0] := 2
+    else if sarg = 'C_ARG4' then
+      actor.state.params.IntVal[0] := 3
+    else if sarg = 'C_ARG5' then
+      actor.state.params.IntVal[0] := 4;
+  end;
+
+  arg := actor.state.params.IntVal[0];
+  if not IsIntegerInRange(arg, 0, 4) then
+    exit;
+
+  offset := P_GetStateFromNameWithOffsetCheck(actor, actor.state.params.StrVal[1]);
+  if @states[offset] <> actor.state then
+    P_SetMobjState(actor, statenum_t(offset));
+end;
+
+//
+// A_SetArg(arg: integer; value: integer)
+//
+procedure A_SetArg(actor: Pmobj_t);
+var
+  arg: integer;
+  sarg: string;
+begin
+  if not P_CheckStateParams(actor, 2) then
+    exit;
+
+  if not actor.state.params.IsComputed[0] then
+  begin
+    sarg := strupper(actor.state.params.StrVal[0]);
+    if sarg = 'C_ARG1' then
+      actor.state.params.IntVal[0] := 0
+    else if sarg = 'C_ARG2' then
+      actor.state.params.IntVal[0] := 1
+    else if sarg = 'C_ARG3' then
+      actor.state.params.IntVal[0] := 2
+    else if sarg = 'C_ARG4' then
+      actor.state.params.IntVal[0] := 3
+    else if sarg = 'C_ARG5' then
+      actor.state.params.IntVal[0] := 4;
+  end;
+
+  arg := actor.state.params.IntVal[0];
+  if not IsIntegerInRange(arg, 0, 4) then
+    exit;
+
+  actor.args[arg] := actor.state.params.IntVal[1];
+end;
+
+//
+// A_SetSpecial(special: integer; [arg1, arg2, arg3, arg4, arg5: integer]);
+//
+procedure A_SetSpecial(actor: Pmobj_t);
+var
+  cnt: integer;
+begin
+  if not P_CheckStateParams(actor, 1, CSP_AT_LEAST) then
+    exit;
+
+  actor.special := actor.state.params.IntVal[0];
+
+  cnt := actor.state.params.Count;
+  if cnt > 1 then
+  begin
+    actor.args[0] := actor.state.params.IntVal[1];
+    if cnt > 2 then
+    begin
+      actor.args[1] := actor.state.params.IntVal[2];
+      if cnt > 3 then
+      begin
+        actor.args[2] := actor.state.params.IntVal[3];
+        if cnt > 4 then
+        begin
+          actor.args[3] := actor.state.params.IntVal[4];
+          if cnt > 5 then
+            actor.args[4] := actor.state.params.IntVal[5];
+        end;
+      end;
+    end;
+  end;
+end;
+
+//
+// A_CheckFlag(flag: string; offset: integer; [aaprt: AAPTR]);
+//
+procedure A_CheckFlag(actor: Pmobj_t);
+var
+  sflag: string;
+  dojump: boolean;
+  flg: LongWord;
+  idx: integer;
+  offset: integer;
+  mo: Pmobj_t;
+begin
+  if not P_CheckStateParams(actor, 2, CSP_AT_LEAST) then
+    exit;
+
+  sflag := strupper(actor.state.params.StrVal[0]);
+
+  dojump := false;
+
+  mo := COPY_AAPTR(actor, actor.state.params.IntVal[2]);
+  if mo = nil then
+    exit;
+
+  idx := mobj_flags.IndexOf(sflag);
+  if idx < 0 then
+    idx := mobj_flags.IndexOf('MF_' + sflag);
+  if idx >= 0 then
+  begin
+    flg := 1 shl idx;
+    dojump := mo.flags and flg <> 0;
+  end;
+
+  {$IFDEF HERETIC_OR_HEXEN}
+  if not dojump then
+  begin
+    idx := mobj_flags2.IndexOf(sflag);
+    if idx < 0 then
+      idx := mobj_flags2.IndexOf('MF2_' + sflag);
+    if idx >= 0 then
+    begin
+      flg := 1 shl idx;
+      dojump := mo.flags2 and flg <> 0;
+    end;
+  end;
+  {$ENDIF}
+
+  if not dojump then
+  begin
+    idx := mobj_flags_ex.IndexOf(sflag);
+    if idx < 0 then
+      idx := mobj_flags_ex.IndexOf('MF_EX_' + sflag);
+    if idx >= 0 then
+    begin
+      flg := 1 shl idx;
+      dojump := mo.flags_ex and flg <> 0;
+    end;
+  end;
+
+  if not dojump then
+  begin
+    idx := mobj_flags2_ex.IndexOf(sflag);
+    if idx < 0 then
+      idx := mobj_flags2_ex.IndexOf('MF2_EX_' + sflag);
+    if idx >= 0 then
+    begin
+      flg := 1 shl idx;
+      dojump := mo.flags2_ex and flg <> 0;
+    end;
+  end;
+
+  if not dojump then
+  begin
+    idx := mobj_flags3_ex.IndexOf(sflag);
+    if idx < 0 then
+      idx := mobj_flags3_ex.IndexOf('MF3_EX_' + sflag);
+    if idx >= 0 then
+    begin
+      flg := 1 shl idx;
+      dojump := mo.flags3_ex and flg <> 0;
+    end;
+  end;
+
+  if not dojump then
+  begin
+    idx := mobj_flags4_ex.IndexOf(sflag);
+    if idx < 0 then
+      idx := mobj_flags4_ex.IndexOf('MF4_EX_' + sflag);
+    if idx >= 0 then
+    begin
+      flg := 1 shl idx;
+      dojump := mo.flags4_ex and flg <> 0;
+    end;
+  end;
+
+  if not dojump then
+    exit;
+
+  offset := P_GetStateFromNameWithOffsetCheck(actor, actor.state.params.StrVal[1]);
+  if @states[offset] <> actor.state then
+      P_SetMobjState(actor, statenum_t(offset));
+end;
+
+//
+// A_SetAngle(angle: integer: [flags: integer]; [aaprt: AAPTR]);
+//
+procedure A_SetAngle(actor: Pmobj_t);
+var
+  mo: Pmobj_t;
+  ang: angle_t;
+  flags: integer;
+begin
+  if not P_CheckStateParams(actor, 1, CSP_AT_LEAST) then
+    exit;
+
+  mo := COPY_AAPTR(actor, actor.state.params.IntVal[2]);
+  if mo = nil then
+    exit;
+
+  ang := ANG1 * actor.state.params.IntVal[0];
+  flags := actor.state.params.IntVal[1];
+  if flags = SPF_FORCECLAMP then
+    mo.flags3_ex := mo.flags3_ex or MF3_EX_NORENDERINTERPOLATION
+  else if flags = SPF_INTERPOLATE then
+    mo.flags3_ex := mo.flags3_ex and not MF3_EX_NORENDERINTERPOLATION;
+
+  mo.angle := ang;
+end;
+
+//
+// A_SetUserVar(varname: string; value: integer)
+// Note: If the variable does not exist we create a new one with the name given.
+// In ZDoom displays an error message.
+//
+procedure A_SetUserVar(actor: Pmobj_t);
+begin
+  if not P_CheckStateParams(actor, 2) then
+    exit;
+
+  P_SetMobjCustomParam(actor, actor.state.params.StrVal[0], actor.state.params.IntVal[1]);
+end;
+
+//
+// A_SetUserArray(varname: string; index: integer; value: integer)
+// Note #1: If the variable does not exist we create a new one with the name given.
+// Note #2: No bounds check, since the array is stored as a sparse array.
+// Note #3: A variable and an array can share the same name
+// Note #4: The name is not nessesary to start with "user_"
+// In ZDoom displays an error message.
+//
+procedure A_SetUserArray(actor: Pmobj_t);
+var
+  arr: string;
+begin
+  if not P_CheckStateParams(actor, 3) then
+    exit;
+
+  sprintf(arr, '%s[%d]', [actor.state.params.StrVal[0], actor.state.params.IntVal[1]]);
+  P_SetMobjCustomParam(actor, arr, actor.state.params.IntVal[2]);
+end;
+
+//
+// A_SetTics(tics: integer)
+//
+procedure A_SetTics(actor: Pmobj_t);
+begin
+  if not P_CheckStateParams(actor, 1) then
+    exit;
+
+  actor.tics := actor.state.params.IntVal[0];
+end;
+
+//
+// A_DropItem(spawntype: string; amount: integer; chance: integer);
+//
+procedure A_DropItem(actor: Pmobj_t);
+var
+  mobj_no: integer;
+  mo: Pmobj_t;
+  propability: integer;
+begin
+  if not P_CheckStateParams(actor, 3) then
+    exit;
+
+  propability := actor.state.params.IntVal[0];
+  if N_Random >= propability then
+    exit;
+
+  if actor.state.params.IsComputed[0] then
+    mobj_no := actor.state.params.IntVal[0]
+  else
+  begin
+    mobj_no := Info_GetMobjNumForName(actor.state.params.StrVal[0]);
+    actor.state.params.IntVal[0] := mobj_no;
+  end;
+  if mobj_no = -1 then
+  begin
+    I_Warning('A_DropItem(): Unknown item %s'#13#10, [actor.state.params.StrVal[0]]);
+    exit;
+  end;
+
+  mo := P_SpawnMobj(actor.x, actor.y, actor.z, mobj_no);
+  {$IFNDEF HEXEN}
+  mo.flags := mo.flags or MF_DROPPED; // special versions of items
+  {$ENDIF}
+  // JVAL Dropped items fall down to floor.
+  mo.z := mo.z + 32 * FRACUNIT;
+  mo.momz := 4 * FRACUNIT;
+  mo.momx := 64 * N_Random;
+  mo.momy := 64 * N_Random;
+  mo.angle := actor.angle;
+end;
+
+procedure P_DoDamage(const mo: Pmobj_t; const damage: integer);
+begin
+  if damage > 0 then
+    P_DamageMobj(mo, nil, nil, damage)
+  else if damage < 0 then
+    P_SetHealth(mo, mo.health - damage);
+end;
+
+//
+// A_DamageSelf(const damage: integer);
+// JVAL: incomplete
+//
+procedure A_DamageSelf(actor: Pmobj_t);
+var
+  damage: integer;
+begin
+  if not P_CheckStateParams(actor, 1, CSP_AT_LEAST) then
+    exit;
+
+  damage := actor.state.params.IntVal[0];
+  P_DoDamage(actor, damage);
+end;
+
+//
+// A_DamageTarget(const damage: integer);
+// JVAL: incomplete
+//
+procedure A_DamageTarget(actor: Pmobj_t);
+var
+  damage: integer;
+begin
+  if not P_CheckStateParams(actor, 1, CSP_AT_LEAST) then
+    exit;
+
+  if actor.target = nil then
+    exit;
+
+  damage := actor.state.params.IntVal[0];
+  P_DoDamage(actor.target, damage);
+end;
+
+//
+// A_DamageTracer(const damage: integer);
+// JVAL: incomplete
+//
+procedure A_DamageTracer(actor: Pmobj_t);
+var
+  damage: integer;
+begin
+  if not P_CheckStateParams(actor, 1, CSP_AT_LEAST) then
+    exit;
+
+  if actor.tracer = nil then
+    exit;
+
+  damage := actor.state.params.IntVal[0];
+  P_DoDamage(actor.tracer, damage);
+end;
+
+//
+// A_KillTarget
+// JVAL: incomplete
+//
+procedure A_KillTarget(actor: Pmobj_t);
+begin
+  if actor.target = nil then
+    exit;
+
+  P_DamageMobj(actor.target, actor, actor, actor.target.health);
+end;
+
+//
+// A_KillTracer
+// JVAL: incomplete
+//
+procedure A_KillTracer(actor: Pmobj_t);
+begin
+  if actor.target = nil then
+    exit;
+
+  P_DamageMobj(actor.target, actor, actor, actor.target.health);
+end;
+
+function P_DoRemoveThing(const mo: Pmobj_t; const flags: integer): boolean;
+begin
+  result := true;
+  if flags and RMVF_EVERYTHING <> 0 then
+    P_RemoveMobj(mo)
+  else if (flags and RMVF_MISC <> 0) and not (Info_IsMonster(mo._type) and (mo.flags and MF_MISSILE <> 0)) then
+    P_RemoveMobj(mo)
+  else if Info_IsMonster(mo._type) and (flags and RMVF_NOMONSTERS = 0) then
+    P_RemoveMobj(mo)
+  else if (mo.flags and MF_MISSILE <> 0) and (flags and RMVF_MISSILES <> 0) then
+    P_RemoveMobj(mo)
+  else
+    result := false;
+end;
+
+//
+// A_RemoveTarget([flags: integer]);
+// JVAL: incomplete
+//
+procedure A_RemoveTarget(actor: Pmobj_t);
+begin
+  if actor.target = nil then
+    exit;
+
+  if actor.target.player <> nil then // No players
+    exit;
+
+  P_DoRemoveThing(actor.target, actor.state.params.IntVal[0]);
+end;
+
+//
+// A_RemoveTracer([flags: integer]);
+// JVAL: incomplete
+//
+procedure A_RemoveTracer(actor: Pmobj_t);
+begin
+  if actor.tracer = nil then
+    exit;
+
+  if actor.tracer.player <> nil then // No players
+    exit;
+
+  P_DoRemoveThing(actor.tracer, actor.state.params.IntVal[0]);
+end;
+
+//
+// A_Remove(aaprt: AAPTR; [flags: integer]);
+// JVAL: incomplete
+//
+procedure A_Remove(actor: Pmobj_t);
+var
+  mo: Pmobj_t;
+begin
+  mo := COPY_AAPTR(actor, actor.state.params.IntVal[0]);
+  if mo = nil then
+    exit;
+
+  P_DoRemoveThing(mo, actor.state.params.IntVal[1]);
+end;
+
+//
+// A_SetFloatBobPhase(bob: integer)
+//
+procedure A_SetFloatBobPhase(actor: Pmobj_t);
+var
+  bob: integer;
+begin
+  if not P_CheckStateParams(actor, 1, CSP_AT_LEAST) then
+    exit;
+
+  bob := actor.state.params.IntVal[0];
+  if IsIntegerInRange(bob, 0, FLOATBOBSIZE - 1) then
+    actor.bob := bob;
+end;
+
+//
+// A_Detonate
+// killough 8/9/98: same as A_Explode, except that the damage is variable
+//
+procedure A_Detonate(actor: Pmobj_t);
+begin
+  P_RadiusAttack(actor, actor.target, actor.info.damage{$IFDEF HEXEN}, actor.info.damage, true{$ENDIF});
+end;
+
+procedure P_SetMobjRelativeState(const mo: Pmobj_t; const offset: integer);
+var
+  cur: integer;
+begin
+  cur := (integer(mo.state) - integer(states)) div SizeOf(state_t);
+  P_SetMobjState(mo, statenum_t(cur + offset));
+end;
+
+procedure P_TransferFriendliness(const src, dest: Pmobj_t);
+begin
+  {$IFDEF STRIFE}
+  if src.flags and MF_ALLY <> 0 then
+    dest.flags := dest.flags or MF_ALLY
+  else
+    dest.flags := dest.flags and not MF_ALLY;
+  {$ENDIF}
+  {$IFDEF DOOM}
+  if src.flags2_ex and MF2_EX_FRIEND <> 0 then
+    dest.flags2_ex := dest.flags2_ex or MF2_EX_FRIEND
+  else
+    dest.flags2_ex := dest.flags2_ex and not MF2_EX_FRIEND;
+  {$ENDIF}
+end;
+
+//
+// killough 11/98
+//
+// The following were inspired by Len Pitre
+//
+// A small set of highly-sought-after code pointers
+//
+procedure A_Spawn(actor: Pmobj_t);
+var
+  mo: Pmobj_t;
+begin
+  if actor.state.misc1 > 0 then
+  begin
+    mo := P_SpawnMobj(actor.x, actor.y, actor.state.misc2 * FRACUNIT + actor.z, actor.state.misc1 - 1);
+    if mo <> nil then
+      P_TransferFriendliness(actor, mo);
+  end;
+end;
+
+//
+// A_Face
+//
+procedure A_Face(actor: Pmobj_t);
+begin
+  actor.angle := actor.angle + actor.state.misc1 * ANG1;
+end;
+
+//
+// A_Scratch
+//
+procedure A_Scratch(actor: Pmobj_t);
+begin
+  if actor.target <> nil then
+  begin
+    A_FaceTarget(actor);
+    if P_CheckMeleeRange(actor) then
+    begin
+      if actor.state.misc2 > 0 then
+        S_StartSound(actor, actor.state.misc2);
+      P_DamageMobj(actor.target, actor, actor, actor.state.misc1);
+    end;
+  end;
+end;
+
+//
+// PlayerToId
+//
+function PlayerToId(const p: Pplayer_t): integer;
+var
+  i: integer;
+begin
+  for i := 0 to MAXPLAYERS - 1 do
+    if p = @players[i] then
+    begin
+      result := i;
+      exit;
+    end;
+
+  result := -1;
+end;
+
+//
+// A_RandomJump
+//
+// [crispy] this is pretty much the only action pointer that makes sense for both mobj and pspr states
+// JVAL: modified to hold both a player_t and a mobj_t in first parameter
+procedure A_RandomJump(obj: pointer; psp: Ppspdef_t);
+var
+  player: Pplayer_t;
+  mo: Pmobj_t;
+  id: integer;
+begin
+  if obj = nil then
+    exit;
+
+  // [crispy] first, try to apply to pspr states
+  // JVAL: Check if obj is a player_t
+  player := obj;
+  id := PlayerToId(player);
+  if (psp <> nil) and (id >= 0) then
+  begin
+    if N_Random < psp.state.misc2 then
+      P_SetPSprite(player, pdiff(psp, @player.psprites[0], SizeOf(pspdef_t)), statenum_t(psp.state.misc1));
+    exit;
+  end;
+
+  // [crispy] second, apply to mobj states
+  // JVAL: Check if obj is a mobj_t
+  mo := obj;
+  if @mo.thinker._function.acp1 = @P_MobjThinker then
+  begin
+    if N_Random < mo.state.misc2 then
+      P_SetMobjState(mo, statenum_t(mo.state.misc1));
+  end;
+end;
+
+{$IFNDEF HEXEN}
+//
+// A_LineEffect
+//
+procedure A_LineEffect(actor: Pmobj_t);
+var
+  player: player_t;
+  oldplayer: Pplayer_t;
+  junk: line_t;
+begin
+  if actor.flags3_ex and MF3_EX_LINEDONE <> 0 then            // Unless already used up
+    exit;
+
+  junk := lines[0];                                           // Fake linedef set to 1st
+  junk.special := actor.state.misc1;                          // Linedef type
+  if junk.special <> 0 then
+  begin
+    oldplayer := actor.player;                                // Remember player status
+    player.health := 100;                                     // Alive player
+    actor.player := @player;                                  // Fake player
+    junk.tag := actor.state.misc2;                            // Sector tag for linedef
+    if not P_UseSpecialLine(actor, @junk, 0) then             // Try using it
+      P_CrossSpecialLinePtr(@junk, 0, actor);                 // Try crossing it
+    if junk.special = 0 then                                  // If type cleared,
+      actor.flags3_ex := actor.flags3_ex or MF3_EX_LINEDONE;  // no more for this thing
+    actor.player := oldplayer;
+  end;
+end;
+{$ENDIF}
+
+procedure A_FlipSprite(actor: Pmobj_t);
+begin
+  actor.flags3_ex := actor.flags3_ex or MF3_EX_FLIPSPRITE;
+end;
+
+procedure A_RandomFlipSprite(actor: Pmobj_t);
+var
+  chance: integer;
+begin
+  if not P_CheckStateParams(actor, 1, CSP_AT_LEAST) then
+    exit;
+
+  chance := actor.state.params.IntVal[0];
+  if chance < P_Random then
+    actor.flags3_ex := actor.flags3_ex or MF3_EX_FLIPSPRITE;
+end;
+
+procedure A_NoFlipSprite(actor: Pmobj_t);
+begin
+  actor.flags3_ex := actor.flags3_ex and not MF3_EX_FLIPSPRITE;
+end;
+
+procedure A_RandomNoFlipSprite(actor: Pmobj_t);
+var
+  chance: integer;
+begin
+  if not P_CheckStateParams(actor, 1, CSP_AT_LEAST) then
+    exit;
+
+  chance := actor.state.params.IntVal[0];
+  if chance < P_Random then
+    actor.flags3_ex := actor.flags3_ex and not MF3_EX_FLIPSPRITE;
+end;
+
+//
+//  A_CustomMeleeAttack(damage: integer, meleesound: string, misssound: string)
+//
+procedure A_CustomMeleeAttack(actor: Pmobj_t);
+var
+  damage: integer;
+  sndidx: integer;
+begin
+  if not P_CheckStateParams(actor, 1, CSP_AT_LEAST) then
+    exit;
+
+  if actor.target = nil then
+    exit;
+
+  A_FaceTarget(actor);
+  if P_CheckMeleeRange(actor) then
+  begin
+    if actor.state.params.IsComputed[1] then
+      sndidx := actor.state.params.IntVal[1]
+    else
+    begin
+      sndidx := S_GetSoundNumForName(actor.state.params.StrVal[1]);
+      actor.state.params.IntVal[1] := sndidx;
+    end;
+    S_StartSound(actor, sndidx);
+    damage := actor.state.params.IntVal[0];
+    P_DamageMobj(actor.target, actor, actor, damage);
+  end
+  else
+  begin
+    if actor.state.params.IsComputed[2] then
+      sndidx := actor.state.params.IntVal[2]
+    else
+    begin
+      sndidx := S_GetSoundNumForName(actor.state.params.StrVal[2]);
+      actor.state.params.IntVal[2] := sndidx;
+    end;
+    S_StartSound(actor, sndidx);
+  end;
+end;
+
+//
+//  A_CustomComboAttack(missiletype: string, spawnheight: integer, damage: integer, meleesound: string)
+//
+procedure A_CustomComboAttack(actor: Pmobj_t);
+var
+  damage: integer;
+  sndidx: integer;
+  mobj_no: integer;
+  ang: angle_t;
+  x, y, z: fixed_t;
+  missile: Pmobj_t;
+begin
+  if not P_CheckStateParams(actor, 2, CSP_AT_LEAST) then
+    exit;
+
+  if actor.target = nil then
+    exit;
+
+  A_FaceTarget(actor);
+  if P_CheckMeleeRange(actor) then
+  begin
+    if actor.state.params.IsComputed[3] then
+      sndidx := actor.state.params.IntVal[3]
+    else
+    begin
+      sndidx := S_GetSoundNumForName(actor.state.params.StrVal[3]);
+      actor.state.params.IntVal[3] := sndidx;
+    end;
+    S_StartSound(actor, sndidx);
+    damage := actor.state.params.IntVal[2];
+    P_DamageMobj(actor.target, actor, actor, damage);
+  end
+  else
+  begin
+    if actor.state.params.IsComputed[0] then
+      mobj_no := actor.state.params.IntVal[0]
+    else
+    begin
+      mobj_no := Info_GetMobjNumForName(actor.state.params.StrVal[0]);
+      actor.state.params.IntVal[0] := mobj_no;
+    end;
+    if mobj_no = -1 then
+      exit;
+
+    ang := (actor.angle - ANG90) shr ANGLETOFINESHIFT;
+    x := actor.x + 32 * finecosine[ang];
+    y := actor.y + 32 * finesine[ang];
+    z := actor.z + actor.state.params.FixedVal[1] - 32 * FRACUNIT;
+    missile := P_SpawnMissileXYZ(x, y, z, actor, actor.target, mobj_no);
+    if missile <> nil then
+    begin
+      if missile.flags_ex and MF_EX_SEEKERMISSILE <> 0 then
+        missile.tracer := actor.target;
+    end;
+  end;
+end;
+
+//
+//  A_SetRenderStyle(style: renderstyle_t, alpha: float)
+//
+procedure A_SetRenderStyle(actor: Pmobj_t);
+begin
+  if not P_CheckStateParams(actor, 1, CSP_AT_LEAST) then
+    exit;
+
+  actor.renderstyle := R_GetRenderstyleForName(actor.state.params.StrVal[0]);
+
+  if actor.state.params.Count > 1 then
+    actor.alpha := GetIntegerInRange(actor.state.params.FixedVal[1], 0, FRACUNIT);
+end;
+
+//
+// A_FadeTo(targ: integer, ammount: integer, flags: integer)
+//
+procedure A_FadeTo(actor: Pmobj_t);
+var
+  targ: fixed_t;
+  amount: fixed_t;
+  flags: integer;
+begin
+  if not P_CheckStateParams(actor, 2, CSP_AT_LEAST) then
+    exit;
+
+  targ := actor.state.params.FixedVal[0];
+  amount := actor.state.params.FixedVal[1];
+
+  if actor.alpha > targ then
+  begin
+    actor.alpha := actor.alpha - amount;
+    if actor.alpha < targ then
+      actor.alpha := targ;
+  end
+  else if actor.alpha < targ then
+  begin
+    actor.alpha := actor.alpha + amount;
+    if actor.alpha > targ then
+      actor.alpha := targ;
+  end;
+
+  if actor.state.params.Count > 2 then
+  begin
+    if actor.state.params.BoolVal[2] then
+      flags := FTF_REMOVE
+    else
+    begin
+      flags := actor.state.params.IntVal[2];
+      if flags and FTF_CLAMP <> 0 then
+        actor.alpha := GetIntegerInRange(actor.alpha, 0, FRACUNIT);
+    end;
+    if (flags and FTF_REMOVE <> 0) and (actor.alpha = targ) then
+      P_RemoveMobj(actor);
+  end;
+end;
+
+//
+// A_SetSize(newradius: integer, newheight: integer, testpos: boolean)
+//
+procedure A_SetSize(actor: Pmobj_t);
+var
+  newradius, newheight: fixed_t;
+  oldradius, oldheight: fixed_t;
+  testpos: boolean;
+begin
+  if not P_CheckStateParams(actor, 2, CSP_AT_LEAST) then
+    exit;
+
+  newradius := actor.state.params.IntVal[0];
+  newheight := actor.state.params.IntVal[1];
+  oldradius := actor.radius;
+  oldheight := actor.height;
+  if newradius >= 0 then
+    actor.radius := newradius;
+  if newheight >= 0 then
+    actor.height := newheight;
+  testpos := actor.state.params.BoolVal[2];
+  if testpos then
+    if not P_TestMobjLocation(actor) then
+    begin
+      actor.radius := oldradius;
+      actor.height := oldheight;
+    end;
+end;
+
+end.

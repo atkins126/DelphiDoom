@@ -208,7 +208,7 @@ begin
     begin
       if st.params <> nil then
         st.params.Actor := mobj;
-      st.action.acp1(mobj);
+      st.action.acp2(mobj, nil);
     end;
 
     state := st.nextstate;
@@ -1326,7 +1326,7 @@ begin
   end;
 
   // check for apropriate skill level
-  if (not netgame) and (mthing.options and 16 <> 0) then
+  if not netgame and (mthing.options and 16 <> 0) then
   begin
     result := nil;
     exit;

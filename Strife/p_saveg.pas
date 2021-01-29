@@ -156,6 +156,7 @@ begin
     for j := 0 to Ord(NUMPSPRITES) - 1 do
       if dest.psprites[j].state <> nil then
         dest.psprites[j].state := Pstate_t(pDiff(dest.psprites[j].state, @states[0], SizeOf(dest.psprites[j].state^)));
+    dest.lastdialogtalker := Pmobj_t(dest.lastdialogtalker.key);
   end;
 end;
 
@@ -287,6 +288,7 @@ begin
         players[i].cmd.jump := p205.cmd.jump;
         players[i].cmd.lookupdown16 := p205.cmd.lookupdown16;
         players[i].nextoof := 0;
+        players[i].lastdialogtalker := nil;
       end;
       incp(pointer(save_p), SizeOf(player_t205));
     end
@@ -395,6 +397,7 @@ begin
         players[i].cmd.jump := p203.cmd.jump;
         players[i].cmd.lookupdown16 := p203.cmd.lookupdown16;
         players[i].nextoof := 0;
+        players[i].lastdialogtalker := nil;
       end;
       incp(pointer(save_p), SizeOf(player_t203));
     end
@@ -413,6 +416,7 @@ begin
         Pticcmd_t202(@players[i].cmd)^ := players[i].cmd202;
         players[i].cmd.lookupdown16 := players[i].cmd.lookupdown * 256;
         players[i].nextoof := 0;
+        players[i].lastdialogtalker := nil;
       end;
       incp(pointer(save_p), SizeOf(player_t122));
     end
@@ -431,6 +435,7 @@ begin
         Pticcmd_t202(@players[i].cmd)^ := players[i].cmd202;
         players[i].cmd.lookupdown16 := players[i].cmd.lookupdown * 256;
         players[i].nextoof := 0;
+        players[i].lastdialogtalker := nil;
       end;
       incp(pointer(save_p), SizeOf(player_t121));
     end
@@ -856,6 +861,8 @@ begin
         mobj.tracer := Pmobj_t(mobj.tracer.key);
       if mobj.target <> nil then
         mobj.target := Pmobj_t(mobj.target.key);
+      if mobj.master <> nil then
+        mobj.master := Pmobj_t(mobj.master.key);
 
       if mobj.player <> nil then
         mobj.player := Pplayer_t(pDiff(mobj.player, @players[0], SizeOf(player_t)) + 1);
@@ -888,6 +895,7 @@ var
   next: Pthinker_t;
   mobj: Pmobj_t;
   parm: mobjcustomparam_t;
+  i: integer;
 begin
   // remove all the current thinkers
   currentthinker := thinkercap.next;
@@ -923,10 +931,16 @@ begin
               begin
                 Pmobj_t(currentthinker).target := P_FindMobjFromKey(integer(Pmobj_t(currentthinker).target));
                 Pmobj_t(currentthinker).tracer := P_FindMobjFromKey(integer(Pmobj_t(currentthinker).tracer));
+                Pmobj_t(currentthinker).master := P_FindMobjFromKey(integer(Pmobj_t(currentthinker).master));
               end;
 
               currentthinker := next;
             end;
+
+            for i := 0 to MAXPLAYERS - 1 do
+              if playeringame[i] then
+                players[i].lastdialogtalker := P_FindMobjFromKey(integer(players[i].lastdialogtalker));
+
           end;
           exit; // end of list
         end;
@@ -953,6 +967,7 @@ begin
             mobj.args[3] := 0;
             mobj.args[4] := 0;
             mobj.special := 0;
+            mobj.master := nil;
           end
           else if savegameversion >= VERSION122 then
           begin
@@ -974,6 +989,7 @@ begin
             mobj.args[3] := 0;
             mobj.args[4] := 0;
             mobj.special := 0;
+            mobj.master := nil;
           end
           else if savegameversion = VERSION121 then
           begin
@@ -997,6 +1013,7 @@ begin
             mobj.args[3] := 0;
             mobj.args[4] := 0;
             mobj.special := 0;
+            mobj.master := nil;
           end
           else if savegameversion = VERSION120 then
           begin
@@ -1030,6 +1047,7 @@ begin
             mobj.args[3] := 0;
             mobj.args[4] := 0;
             mobj.special := 0;
+            mobj.master := nil;
           end
           else
             I_Error('P_UnArchiveThinkers(): Unsupported saved game version: %d', [savegameversion]);
@@ -1037,7 +1055,7 @@ begin
           mobj.validcount := 0;
           mobj.lightvalidcount := 0;
           mobj.rendervalidcount := 0;
-            
+
           if mobj.key < 2 then
             mobj.key := P_GenGlobalMobjKey;
           P_NotifyMobjKey(mobj);
@@ -1048,6 +1066,7 @@ begin
           begin
             mobj.target := nil;
             mobj.tracer := nil;
+            mobj.master := nil;
           end;
           mobj.touching_sectorlist := nil;
 

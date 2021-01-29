@@ -74,6 +74,8 @@ function P_ChangeSector(sector: Psector_t; crunch: boolean): boolean;
 procedure P_SlideMove(mo: Pmobj_t);
 
 function P_CheckOnmobj(thing: Pmobj_t): Pmobj_t;
+function P_TestMobjLocation(mobj: Pmobj_t): boolean;
+
 
 var
   linetarget: Pmobj_t;  // who got hit (or NULL)
@@ -99,8 +101,6 @@ var
   attackrange: fixed_t;
 
 function P_SectorJumpOverhead(const s: Psector_t; const p: Pplayer_t = nil): integer;
-
-function P_TestMobjLocation(mobj: Pmobj_t): boolean;
 
 // JVAL: 3d Floors move from implementation section to interface  
 var
@@ -2378,7 +2378,7 @@ var
   flags: integer;
 begin
   flags := mobj.flags;
-  mobj.flags := mobj.flags and (not MF_PICKUP);
+  mobj.flags := mobj.flags and not MF_PICKUP;
   if P_CheckPosition(mobj, mobj.x, mobj.y) then
   begin // XY is ok, now check Z
     mobj.flags := flags;

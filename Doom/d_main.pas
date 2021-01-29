@@ -3,7 +3,7 @@
 //  DelphiDoom: A modified and improved DOOM engine for Windows
 //  based on original Linux Doom as published by "id Software"
 //  Copyright (C) 1993-1996 by id Software, Inc.
-//  Copyright (C) 2004-2020 by Jim Valavanis
+//  Copyright (C) 2004-2021 by Jim Valavanis
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -2156,8 +2156,8 @@ begin
   {$ENDIF}
 
   printf('DEH_Init: Initializing dehacked subsystem.'#13#10);
-  DEH_Init;
   SC_DefaultStatedefLump;
+  DEH_Init;
 
   if M_CheckParm('-internalgamedef') = 0 then
     if not DEH_ParseLumpName('GAMEDEF') then
@@ -2204,15 +2204,21 @@ begin
   {$ENDIF}
 
   if M_CheckParm('-nowaddehacked') = 0 then
-    if not DEH_ParseLumpName('DEHACKED') then
-      printf('DEH_ParseLumpName: DEHACKED lump not found.'#13#10);
+    if not DEH_ParseLumpNames('DEHACKED') then
+      printf('DEH_ParseLumpName: DEHACKED lump(s) not found.'#13#10);
 
   // JVAL Adding dehached files
   D_AddDEHFiles('-deh');
   D_AddDEHFiles('-bex');
 
+  // JVAL: 20210108 - Must be called after parsing ACTORDEF lumps
+  Info_ResolveActordefActors;
+
   printf('Info_CheckStates: Check states tables'#13#10);
   Info_CheckStates;
+
+  printf('Info_SaveActions: Saving state actions'#13#10);
+  Info_SaveActions;
 
   {$IFNDEF FPC}
   SUC_Progress(50);

@@ -48,7 +48,7 @@ procedure DEH_Init;
 procedure DEH_ShutDown;
 
 const
-  DEHNUMACTIONS = 298;
+  DEHNUMACTIONS = 337;
 
 type
   deh_action_t = record
@@ -121,8 +121,8 @@ uses
   p_musinfo,
   r_renderstyle,
   sounds,
-  sc_engine,
   sc_params,
+  sc_engine,
   sc_states,
   v_data,
   w_wad,
@@ -233,7 +233,7 @@ begin
     ////////////////////////////////////////////////////////////////////////////
     // Parse a thing ///////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
-      stmp := firstword(token2);
+      stmp := parsefirstword(token2);
 
       if (token1 = 'NEWTHING') or (stmp = '') or (itoa(atoi(stmp)) <> stmp) then
       begin
@@ -278,6 +278,7 @@ begin
 
       // Retrieve current think field index
         splitstring(str, token1, token2, '=');
+        token2 := RemoveQuotesFromString(token2);
         mobj_idx := mobj_tokens.IndexOf(token1);
 
         if mobj_idx = -1 then
@@ -806,7 +807,7 @@ begin
 
         if not foundtext and (len1 = 4) and (len2 = 4) then
         begin
-          for j := 0 to numsprites - 1 do // First music is dummy
+          for j := 0 to numsprites - 1 do
           begin
             stmp := Chr(sprnames[j] and $FF) +
                     Chr(sprnames[j] shr 8 and $FF) +
@@ -1388,6 +1389,7 @@ function DEH_CurrentSettings: TDStringList;
 var
   i, j: integer;
   str: string;
+  cmdln: string;
 begin
   if not deh_initialized then
     DEH_Init;
@@ -1395,6 +1397,13 @@ begin
   result := TDStringList.Create;
   result.Add('Patch File for DeHackEd');
   result.Add('# Created with %s, %s', [D_Version, D_VersionBuilt]);
+
+  cmdln := fname(myargv[0]);
+  for i := 1 to myargc - 1 do
+    cmdln := cmdln + ' ' + myargv[i];
+  result.Add('# Command line options:');
+  result.Add('# %s'#13#10, [cmdln]);
+
   result.Add('');
 
   result.Add('# Note: Use the ''#'' or ''//'' (DelphiDoom specific) sign to start comment lines.');
@@ -1906,6 +1915,9 @@ begin
   mobj_flags3_ex.Add('MF3_EX_NOMAXMOVE');
   mobj_flags3_ex.Add('MF3_EX_NOCRASH');
   mobj_flags3_ex.Add('MF3_EX_BLOODIGNOREDAMAGE');
+  mobj_flags3_ex.Add('MF3_EX_NORENDERINTERPOLATION');
+  mobj_flags3_ex.Add('MF3_EX_LINEDONE');
+  mobj_flags3_ex.Add('MF3_EX_FLIPSPRITE');
 
   mobj_flags4_ex := TDTextList.Create;
 
@@ -2826,6 +2838,123 @@ begin
   deh_actions[297].action.acp1 := @A_JumpIfTracerCloser;
   deh_actions[297].name := strupper('JumpIfTracerCloser');
   {$IFDEF DLL}deh_actions[297].decl := 'A_JumpIfTracerCloser(distancetotarget: float, offset: integer)';{$ENDIF}
+  deh_actions[298].action.acp1 := @A_SetMass;
+  deh_actions[298].name := strupper('SetMass');
+  {$IFDEF DLL}deh_actions[298].decl := 'A_SetMass(mass: integer)';{$ENDIF}
+  deh_actions[299].action.acp1 := @A_SetTargetMass;
+  deh_actions[299].name := strupper('SetTargetMass');
+  {$IFDEF DLL}deh_actions[299].decl := 'A_SetTargetMass(mass: integer)';{$ENDIF}
+  deh_actions[300].action.acp1 := @A_SetTracerMass;
+  deh_actions[300].name := strupper('SetTracerMass');
+  {$IFDEF DLL}deh_actions[300].decl := 'A_SetTracerMass(mass: integer)';{$ENDIF}
+  deh_actions[301].action.acp1 := @A_CheckSight;
+  deh_actions[301].name := strupper('CheckSight');
+  {$IFDEF DLL}deh_actions[301].decl := 'A_CheckSight(offset: integer)';{$ENDIF}
+  deh_actions[302].action.acp1 := @A_CheckSightOrRange;
+  deh_actions[302].name := strupper('CheckSightOrRange');
+  {$IFDEF DLL}deh_actions[302].decl := 'A_CheckSightOrRange(distance: float, offset: integer, [twodi: boolean=false])';{$ENDIF}
+  deh_actions[303].action.acp1 := @A_CheckRange;
+  deh_actions[303].name := strupper('CheckRange');
+  {$IFDEF DLL}deh_actions[303].decl := 'A_CheckRange(distance: float, offset: integer, [twodi: boolean=false])';{$ENDIF}
+  deh_actions[304].action.acp1 := @A_CountdownArg;
+  deh_actions[304].name := strupper('CountdownArg');
+  {$IFDEF DLL}deh_actions[304].decl := 'A_CountdownArg(arg: integer, offset: integer)';{$ENDIF}
+  deh_actions[305].action.acp1 := @A_SetArg;
+  deh_actions[305].name := strupper('SetArg');
+  {$IFDEF DLL}deh_actions[305].decl := 'A_SetArg(arg: integer, value: integer)';{$ENDIF}
+  deh_actions[306].action.acp1 := @A_SetSpecial;
+  deh_actions[306].name := strupper('SetSpecial');
+  {$IFDEF DLL}deh_actions[306].decl := 'A_SetSpecial(special: integer, [arg1, arg2, arg3, arg4, arg5: integer])';{$ENDIF}
+  deh_actions[307].action.acp1 := @A_CheckFlag;
+  deh_actions[307].name := strupper('CheckFlag');
+  {$IFDEF DLL}deh_actions[307].decl := 'A_CheckFlag(flag: string, offset: integer, [aaprt: AAPTR])';{$ENDIF}
+  deh_actions[308].action.acp1 := @A_SetAngle;
+  deh_actions[308].name := strupper('SetAngle');
+  {$IFDEF DLL}deh_actions[308].decl := 'A_SetAngle(angle: integer, [flags: integer], [aaprt: AAPTR])';{$ENDIF}
+  deh_actions[309].action.acp1 := @A_SetUserVar;
+  deh_actions[309].name := strupper('SetUserVar');
+  {$IFDEF DLL}deh_actions[309].decl := 'A_SetUserVar(varname: string, value: integer)';{$ENDIF}
+  deh_actions[310].action.acp1 := @A_SetUserArray;
+  deh_actions[310].name := strupper('SetUserArray');
+  {$IFDEF DLL}deh_actions[310].decl := 'A_SetUserArray(varname: string, index: integer, value: integer)';{$ENDIF}
+  deh_actions[311].action.acp1 := @A_SetTics;
+  deh_actions[311].name := strupper('SetTics');
+  {$IFDEF DLL}deh_actions[311].decl := 'A_SetTics(tics: integer)';{$ENDIF}
+  deh_actions[312].action.acp1 := @A_DropItem;
+  deh_actions[312].name := strupper('DropItem');
+  {$IFDEF DLL}deh_actions[312].decl := 'A_DropItem(spawntype: string, amount: integer, chance: integer)';{$ENDIF}
+  deh_actions[313].action.acp1 := @A_DamageSelf;
+  deh_actions[313].name := strupper('DamageSelf');
+  {$IFDEF DLL}deh_actions[313].decl := 'A_DamageSelf(actor: Pmobj_t)';{$ENDIF}
+  deh_actions[314].action.acp1 := @A_DamageTarget;
+  deh_actions[314].name := strupper('DamageTarget');
+  {$IFDEF DLL}deh_actions[314].decl := 'A_DamageTarget(const damage: integer)';{$ENDIF}
+  deh_actions[315].action.acp1 := @A_DamageTracer;
+  deh_actions[315].name := strupper('DamageTracer');
+  {$IFDEF DLL}deh_actions[315].decl := 'A_DamageTracer(const damage: integer)';{$ENDIF}
+  deh_actions[316].action.acp1 := @A_KillTarget;
+  deh_actions[316].name := strupper('KillTarget');
+  {$IFDEF DLL}deh_actions[316].decl := 'A_KillTarget()';{$ENDIF}
+  deh_actions[317].action.acp1 := @A_KillTracer;
+  deh_actions[317].name := strupper('KillTracer');
+  {$IFDEF DLL}deh_actions[317].decl := 'A_KillTracer()';{$ENDIF}
+  deh_actions[318].action.acp1 := @A_RemoveTarget;
+  deh_actions[318].name := strupper('RemoveTarget');
+  {$IFDEF DLL}deh_actions[318].decl := 'A_RemoveTarget([flags: integer])';{$ENDIF}
+  deh_actions[319].action.acp1 := @A_RemoveTracer;
+  deh_actions[319].name := strupper('RemoveTracer');
+  {$IFDEF DLL}deh_actions[319].decl := 'A_RemoveTracer([flags: integer])';{$ENDIF}
+  deh_actions[320].action.acp1 := @A_Remove;
+  deh_actions[320].name := strupper('Remove');
+  {$IFDEF DLL}deh_actions[320].decl := 'A_Remove(aaprt: AAPTR, [flags: integer])';{$ENDIF}
+  deh_actions[321].action.acp1 := @A_SetFloatBobPhase;
+  deh_actions[321].name := strupper('SetFloatBobPhase');
+  {$IFDEF DLL}deh_actions[321].decl := 'A_SetFloatBobPhase(bob: integer)';{$ENDIF}
+  deh_actions[322].action.acp1 := @A_Detonate;
+  deh_actions[322].name := strupper('Detonate');
+  {$IFDEF DLL}deh_actions[322].decl := 'A_Detonate()';{$ENDIF}
+  deh_actions[323].action.acp1 := @A_Spawn;
+  deh_actions[323].name := strupper('Spawn');
+  {$IFDEF DLL}deh_actions[323].decl := 'A_Spawn()';{$ENDIF}
+  deh_actions[324].action.acp1 := @A_Face;
+  deh_actions[324].name := strupper('Face');
+  {$IFDEF DLL}deh_actions[324].decl := 'A_Face()';{$ENDIF}
+  deh_actions[325].action.acp1 := @A_Scratch;
+  deh_actions[325].name := strupper('Scratch');
+  {$IFDEF DLL}deh_actions[325].decl := 'A_Scratch()';{$ENDIF}
+  deh_actions[326].action.acp1 := @A_RandomJump;
+  deh_actions[326].name := strupper('RandomJump');
+  {$IFDEF DLL}deh_actions[326].decl := 'A_RandomJump()';{$ENDIF}
+  deh_actions[327].action.acp1 := @A_LineEffect;
+  deh_actions[327].name := strupper('LineEffect');
+  {$IFDEF DLL}deh_actions[327].decl := 'A_LineEffect()';{$ENDIF}
+  deh_actions[328].action.acp1 := @A_FlipSprite;
+  deh_actions[328].name := strupper('FlipSprite');
+  {$IFDEF DLL}deh_actions[328].decl := 'A_FlipSprite()';{$ENDIF}
+  deh_actions[329].action.acp1 := @A_NoFlipSprite;
+  deh_actions[329].name := strupper('NoFlipSprite');
+  {$IFDEF DLL}deh_actions[329].decl := 'A_NoFlipSprite()';{$ENDIF}
+  deh_actions[330].action.acp1 := @A_RandomFlipSprite;
+  deh_actions[330].name := strupper('RandomFlipSprite');
+  {$IFDEF DLL}deh_actions[330].decl := 'A_RandomFlipSprite(chance: integer)';{$ENDIF}
+  deh_actions[331].action.acp1 := @A_RandomNoFlipSprite;
+  deh_actions[331].name := strupper('RandomNoFlipSprite');
+  {$IFDEF DLL}deh_actions[331].decl := 'A_RandomNoFlipSprite(chance: integer)';{$ENDIF}
+  deh_actions[332].action.acp1 := @A_CustomMeleeAttack;
+  deh_actions[332].name := strupper('CustomMeleeAttack');
+  {$IFDEF DLL}deh_actions[332].decl := 'A_CustomMeleeAttack(damage: integer, meleesound: string, misssound: string)';{$ENDIF}
+  deh_actions[333].action.acp1 := @A_CustomComboAttack;
+  deh_actions[333].name := strupper('CustomComboAttack');
+  {$IFDEF DLL}deh_actions[333].decl := 'A_CustomComboAttack(missiletype: string, spawnheight: integer, damage: integer, meleesound: string)';{$ENDIF}
+  deh_actions[334].action.acp1 := @A_SetRenderStyle;
+  deh_actions[334].name := strupper('SetRenderStyle');
+  {$IFDEF DLL}deh_actions[334].decl := 'A_SetRenderStyle(style: renderstyle_t, alpha: float)';{$ENDIF}
+  deh_actions[335].action.acp1 := @A_FadeTo;
+  deh_actions[335].name := strupper('FadeTo');
+  {$IFDEF DLL}deh_actions[335].decl := 'A_FadeTo(targ: integer, ammount: integer, flags: integer)';{$ENDIF}
+  deh_actions[336].action.acp1 := @A_SetSize;
+  deh_actions[336].name := strupper('SetSize');
+  {$IFDEF DLL}deh_actions[336].decl := 'A_SetSize(newradius: integer, newheight: integer, testpos: boolean)';{$ENDIF}
 
   deh_strings.numstrings := 0;
   deh_strings.realnumstrings := 0;
